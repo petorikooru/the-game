@@ -8,4 +8,4 @@ Basically there are 3 games, which are :
 3. Random Number Generator guesser
 
 There is a market that you can buy credit in order to play the games.
-Also, there are secret option that basically insta-win the game.
+Also, there are secret options that can basically insta-win u the game.
