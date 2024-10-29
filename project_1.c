@@ -11,8 +11,8 @@
 #define BLU   "\x1B[34m"
 #define MAG   "\x1B[35m"
 #define RESET "\x1B[0m"
-#define CURSOR_H "\e[?25l"
-#define CURSOR_E "\e[?25h"
+#define CURSOR_H "\e[?25l" // hide cursor
+#define CURSOR_E "\e[?25h" // enable cursor
 
 // Cheat options
 int cheat[3] = {0};
@@ -111,31 +111,26 @@ void slot(){
         }
         
         // Rolling
-        printf( BLU"===================\n"RESET
-                BLU"|  "RESET);
-
         for (int i=0; i<3; i++){
-            if (cheat[0] == 0){
-                value[i] = rand() % (9);
-            }else {
-                value[i] = 7; // Cheat code (why)
-            }
-            printf("[%i]  ",value[i]);   
+            if (cheat[0] == 1) value[i] = 7; // Cheat code (why)
+            else value[i] = rand() % (9); 
         }
-
-        printf( BLU"|--"RED"O\n"RESET
-                BLU"===================\n"RESET);        
+        printf( BLU"===================\n"RESET
+                BLU"|  "RESET"[%i]  [%i]  [%i]  "BLU"|--"RED"O\n"RESET
+                BLU"===================\n"RESET,
+                value[0], value[1], value[2]
+        );      
 
         // If you get [7] [7] [7]
         if (value[0] == 7 && value[1] == 7 && value[2] == 7){
             printf( "Jackpot! You just win a "GRN"real estate!\n"RESET
-                    GRN"$100 "RESET"has been added into your balance\n");
-            balance += 100;
+                    GRN"$500 "RESET"has been added into your balance\n");
+            balance += 500;
         }
         // If you get all the same numbers
         else if (value[0] == value[1] && value[0] == value[2] && value[1] == value[2]){
             printf( "Congrats, you just win "GRN"$50!\n"RESET);
-            balance += 50;
+            balance += 100;
         }
         // If you get atleast 2 numbers matching
         else if (value[0] == value[1] || value[0] == value[2] || value[1] == value[2]){
@@ -275,7 +270,6 @@ void rng(){
             system("clear");
         }
     }
-    back();
     return;
 }
 
@@ -291,6 +285,11 @@ void market(){
     int cost = 10 * add;
     int change = balance - cost;
 
+    if (add < 0){
+        printf(RED"Nuh uh... Too bad you can't do that (·ω·)\n"RESET);
+        back();
+        return;
+    }
     if (change < 0){
         int diff; 
         if (balance >= 0) diff = cost - balance; // Non-negative balances
@@ -302,33 +301,29 @@ void market(){
             back();
             return;
         }
-    }else if (add < 0){
-        printf(RED"Nuh uh... Too bad you can't do that (·ω·)\n"RESET);
-        back();
-        return;
     }
     credits += add;
     balance -= 10 * add;
 
-    // loading bar
-    int size = 34;
-    int i;
+    // Loading bar
+    int size = 34; // Loading bar size
+    int candy = 2; // the "o"
+    printf("\nTransfering...");
     printf("\n[");
     for (int i=0; i < size/2; i++){
-        printf(" o");
+        printf("%*co", candy-1, ' ');
     }
     printf("]");
     printf("\r");
     for (int i=0; i <= size; i++){
         fflush(stdout);
         usleep(1000*75);
-        if (i==0) printf(CURSOR_H"[");
+        if (i==0) printf(CURSOR_H"[ ");
         if (i==size) printf("]");
         else {
-            if (i>2){
-                if (i%2 >= 1) printf(YEL"\b-"MAG"C"RESET);
-                else printf(YEL"\b-"MAG"c"RESET);
-            }else printf("-");
+            if (i == size - 1 )printf(YEL"\b-"RESET);
+            else if (i%2 >= 1) printf(YEL"\b-"MAG"C"RESET);
+            else printf(YEL"\b-"MAG"c"RESET);
         }
     }
     printf(BLU" Done! (≧∇≦)"RESET CURSOR_E);
@@ -367,9 +362,8 @@ void hidden(){
 
     while(1){
         system("clear");
-        printf( "You just opened "MAG"hidden options! "RESET"What option do you want?\n"
-            "(just select the option again if you want to change it)\n"
-            "1 : Change the amount of credit\n"
+        printf( "You just opened "MAG"hidden options!\n"RESET"What option do you want?\n"
+            GRN"1 : Change the amount of credit\n"RESET
             "2 : Always win on slot\n"
             "3 : Always win on coin toss\n"
             "4 : Always win on rng\n"
