@@ -11,4 +11,9 @@ Additional options :
 1. Market (to buy credit for now)
 2. Achievement
 
+Planned Features :
+1. Login and Sign-up
+2. Leaderboard 
+3. idk, something that will comes up in my dream
+
 Also, there are secret options that can basically insta-win u the game.
