@@ -12,8 +12,8 @@ Additional options :
 2. Achievement
 
 Planned Features :
-1. Login and Sign-up [x]
-2. Leaderboard [x]
+1. Login and Sign-up [Done]
+2. Leaderboard [Done]
 3. ncurses integration so it will look much nicer
 4. idk, something that will comes up in my dream
 
