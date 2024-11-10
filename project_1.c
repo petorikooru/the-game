@@ -62,7 +62,7 @@ void main(){
                 printf(MAG"See you next time!"RESET);
                 return;
             default :
-                printf(RED"Invalid Input!"RESET);
+                printf(RED"Invalid Input!\n"RESET);
                 back();
                 break;
         }
@@ -228,12 +228,12 @@ void leaderboard(){
     fclose(user_data); // Close the file so it wont overwrite
 
     // Insertion Sort (from the highest)
-    for (int i = 0; i < total_users; i++){
-        int temp = user[i].counter[3]; // Sum of all gambling counter
+    for (int i = 0; i <= total_users-1; i++){
+        int temp = user[i].counter[3]; // Gambling Counter
         data new = user[i];
         int j = i;
         while (j > 0 && temp > user[j-1].counter[3]){
-            user[i] = user[j - 1];
+            user[j] = user[j - 1];
             j = j - 1;
         }
         user[j].counter[3] = temp;
@@ -355,7 +355,7 @@ void slot(){
         // If you get all the same numbers
         else if (value[0] == value[1] && value[0] == value[2] && value[1] == value[2]){
             printf( "Congrats, you just win "GRN"$50!\n"RESET);
-            current.balances += 100;
+            current.balances += 50;
         }
         // If you get atleast 2 numbers matching
         else if (value[0] == value[1] || value[0] == value[2] || value[1] == value[2]){
