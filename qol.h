@@ -32,14 +32,24 @@ int confirm(){
     else return 0;
 }
 
-/* File size check*/ // Not used yet
+/* File size check*/
 int check(FILE *data){
-    fseek(data, 0, SEEK_SET);
+    // If the file doesnt exist
+    if (!data) {
+        printf(RED"There is no one yet (>_<)\n"RESET);
+        fflush(stdout); sleep(1);
+        return 1;
+    }
+
     fseek(data, 0, SEEK_END);
     long size = ftell(data);
-    fseek(data, 0, SEEK_SET);
     fclose(data);
-    if (size) return 1;
+
+    if (size <= 0) {
+        printf(RED"There is no one yet (>_<)\n"RESET);
+        fflush(stdout); sleep(1);
+        return 1;
+    }
     else return 0;
 }
 
