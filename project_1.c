@@ -16,9 +16,9 @@ typedef struct{
     int counter[4]; // Gambling counter
     int persist[3]; // Related to achievement
 } data;
-data current;
-data temp;
-data record;
+data current;   // Logged in user data
+data temp;      // Temporary data
+data record;    // Recorded data
 
 /* Game Center! See who's the most gamble addicted person! */
 
@@ -103,17 +103,17 @@ void login(){
     temp.password[strlen(temp.password) - 1] = '\0';
 
     // Match username and password with in the database
-    int *ptr = &auth;
+    int *auth_ptr = &auth;
     int found;
 
     // Admin login
     if (strcmp(temp.username, "admin") == 0){
         if (strcmp(temp.password, "123") == 0){
-            printf(BLU"\n[Entering as an admin...]\n"RESET);
-            *ptr = 2;
+            printf(BLU"[Entering as an admin...]\n"RESET);
+            *auth_ptr = 2;
         } else{
-            printf(RED"\nSorry you are not authorized! T_T\n"RESET);
-            *ptr = 0;
+            printf(RED"Sorry you are not authorized! T_T\n"RESET);
+            *auth_ptr = 0;
         }
         back();
         return;
@@ -121,11 +121,9 @@ void login(){
     
     // User login
     user_data = fopen("data.dat","rb");
-    if (!user_data) {
-        printf(RED"There is no one yet (>_<)\n"RESET);
-        back();
-        return;
-    }
+    if (check(user_data)) return;
+    else user_data = fopen("data.dat","rb");
+
     // Check if the user input is the same as recorded one
     while(fread(&record,sizeof(data), 1, user_data) == 1){
         if (strcmp(record.username, temp.username) == 0){
@@ -134,17 +132,17 @@ void login(){
             if (strcmp(record.password, temp.password) == 0){
                 printf(BLU"Login Successfull!\n"RESET);
                 current = record; 
-                *ptr = 1;
+                *auth_ptr = 1;
             } else{
                 printf(RED"Password incorrect!\n"RESET);
-                *ptr = 0;
+                *auth_ptr = 0;
             }       
         }
     }
 
     if (found != 1){
         printf(RED"User not found!\n"RESET);
-        *ptr = 0;
+        *auth_ptr = 0;
     }
     fclose(user_data);
     back();
@@ -189,14 +187,14 @@ void sign_up(){
             }
         }
         if (exist) {
-            printf("\nQuit? (Y/n)"); if(confirm()) return;
+            printf(YEL"Quit? (Y/n)"RESET); if(confirm()) return;
             system("clear");
             continue;
         }
         // If they just input enter
         if (strlen(temp.username) == 0) {
-            printf(RED"Please input your username!\n"RESET);
-            printf("Quit? (Y/n)"); if(confirm()) return;
+            printf(RED"\nPlease input your username!\n"RESET);
+            printf(YEL"Quit? (Y/n)"RESET); if(confirm()) return;
             system("clear");
         } else break;
     }
@@ -210,7 +208,7 @@ void sign_up(){
 
         if (strlen(temp.password) == 0) {
             printf(RED"Password cannot be blank!\n"RESET);
-            printf("Quit? (Y/n)"); if(confirm()) return;
+            printf(YEL"Quit? (Y/n)"RESET); if(confirm()) return;
             system("clear");
             printf(BLU"::: Sign Up :::\n"RESET);
             printf("Username : %s\n", temp.username);
@@ -252,11 +250,8 @@ void sign_up(){
 
 void leaderboard(){
     FILE *user_data = fopen("data.dat", "rb");
-    if (!user_data ) {
-        printf(RED"There is no one yet (>_<)\n"RESET);
-        back();
-        return;
-    }
+    if (check(user_data)) return;
+    else user_data = fopen("data.dat","rb");
 
     system("clear");
 
@@ -644,7 +639,7 @@ void achievement(){
     system("clear"); 
 
     printf(MAG"Your achievement :\n"RESET);
-    char *game[] = {"Slot","Coin Toss","Random Number Generator"};
+    char *game[] = {"Slot","Coin Toss","Random Number Guesser"};
 
     for(int i=0; i < 3; i++){
         if (current.counter[i] >= 10) {
@@ -730,10 +725,8 @@ int view(){
     FILE *user_data = fopen("data.dat", "rb");
 
     system("clear");
-    if (!user_data ) {
-        printf(RED"There is no one yet (>_<)\n"RESET);
-        return 1;
-    }
+    if (check(user_data)) return 1;
+    else user_data = fopen("data.dat","rb");
 
     printf(MAG"List of registered user :\n"RESET);
     int i = 1;
@@ -758,21 +751,28 @@ void nuke(){
 
     // Name input
     char input[32+1];
-    printf(RED"Which user you want to nuke?\n"RESET);
+    printf(RED"Which user do you want to nuke?\n"RESET);
     printf(YEL"Your input : "RESET); 
     fgets(input, sizeof(input), stdin);
     input[strlen(input) - 1] = '\0';
 
     // Delete the user data
+    int exist = 0;
     rewind(user_data);
     while(fread(&record, sizeof(record), 1, user_data) == 1){
+        if (strcmp(record.username, input) == 0){
+            exist = 1;
+        }
         if (strcmp(record.username, input) != 0){
             fwrite(&record, sizeof(record), 1, temp);
         }
     }
-
-    nuke_loading();
-    printf(GRN"\nSuccessfully deleting "BLU"\"%s\"\n"RESET, input);
+    if (exist){
+        nuke_loading();
+        printf(GRN"\nSuccessfully deleting "BLU"\"%s\"\n"RESET, input);
+    } else{
+        printf(RED"\nThere is no user with that name! (>_<)\n"RESET);
+    }
 
     fclose(temp);
     fclose(user_data);
