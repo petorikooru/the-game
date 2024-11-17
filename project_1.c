@@ -7,7 +7,7 @@
 int cheat[3] = {0};
 int auth;
 
-//Personal user data (see who's the true gambler)
+// Personal user data (see who's the true gambler)
 typedef struct{
     char username[32+1];
     char password[32+1];
@@ -34,7 +34,6 @@ void coin();
 void rng();
 void market();
 void achievement();
-void hidden();
 /* Admin */
 void admin_screen();
 int view();
@@ -104,7 +103,7 @@ void login(){
 
     // Match username and password with in the database
     int *auth_ptr = &auth;
-    int found;
+    int found = 0;
 
     // Admin login
     if (strcmp(temp.username, "admin") == 0){
@@ -121,7 +120,7 @@ void login(){
     
     // User login
     user_data = fopen("data.dat","rb");
-    if (check(user_data)) return;
+    if (check(user_data)) {back(); return;}
     else user_data = fopen("data.dat","rb");
 
     // Check if the user input is the same as recorded one
@@ -140,7 +139,7 @@ void login(){
         }
     }
 
-    if (found != 1){
+    if (!found){
         printf(RED"User not found!\n"RESET);
         *auth_ptr = 0;
     }
@@ -250,7 +249,7 @@ void sign_up(){
 
 void leaderboard(){
     FILE *user_data = fopen("data.dat", "rb");
-    if (check(user_data)) return;
+    if (check(user_data)) {back(); return;}
     else user_data = fopen("data.dat","rb");
 
     system("clear");
@@ -341,9 +340,6 @@ void main_screen(){
                 sleep(1);
                 printf(CURSOR_E);
                 return;
-            case 727:
-                hidden();
-                break;
             default:
                 printf(RED"Invalid option inputted, Please select the correct one...\n"RESET);
                 back();
@@ -588,51 +584,6 @@ void market(){
     return;
 }
 
-void hidden(){
-    int input, i;
-
-    while(1){
-        system("clear");
-        printf( "You just opened "MAG"hidden options!\n"RESET"What option do you want?\n"
-            GRN "1 : Change the amount of credit\n"RESET
-                "2 : Always win on slot\n"
-                "3 : Always win on coin toss\n"
-                "4 : Always win on rng\n"
-            RED "0 : Return to previous Selection\n"RESET
-                "Your input: "
-        );
-        scanf("%i", &input); getchar();
-        if (input == 1){
-            int new;
-            printf("\nNew credits (previous = %i) : ", current.credits);
-            scanf("%i", &new); getchar();
-            current.credits += new;
-            printf("Credits changed to"GRN" %i\n"RESET, current.credits);
-            back();
-        } else if (input == 2 || input == 3 || input == 4){
-            if (input == 2) i = 0;
-            else if(input == 3) i = 1;
-            else i = 2;
-            printf("\nPrevious value: %s\n", (cheat[i] == 1) ? BLU"True"RESET : RED"False"RESET);
-            printf("Change? (Y/n) : ");
-            if (confirm() == 1) {
-                if (cheat[i] == 0){
-                    cheat[i] = 1;
-                }else cheat [i] = 0;
-                printf("Successfully changed to %s\n", (cheat[i] == 1) ? BLU"True"RESET : RED"False"RESET);
-            } else{
-                printf(RED"No change is made...\n"RESET);
-            }
-            back();
-        } else if (input == 0) return;
-        else {
-            printf(RED"Please choose the correct option > w <\n"RESET);
-            back();
-        }
-    }
-    update_data();
-}
-
 void achievement(){
  
     int track = 0;
@@ -684,15 +635,18 @@ void achievement(){
 
 /* Admin */
 void admin_screen(){
-    void idk();
+    void ascii();
+    void cheat_screen();
 
     int input; 
     while(1){
         system("clear");
-        printf( MAG "What do you want?\n"RESET
+        printf( MAG "Hello Mr. Admin!\n"
+                    "What do you want to select? >///<\n"RESET
                     "1. View Registered user\n"
                     "2. Remove User\n"
-                    "3. Idk\n"
+                    "3. Cheat\n"
+                BLU "9. ASCII art\n"
                 RED "0. Exit\n"RESET
                     "Your input : ");
         scanf("%i", &input); getchar();
@@ -705,7 +659,10 @@ void admin_screen(){
                 nuke();
                 break;
             case 3 :
-                idk();
+                cheat_screen();
+                break;
+            case 9 :
+                ascii();
                 break;
             case 0 :
                 system("clear");
@@ -733,7 +690,7 @@ int view(){
     while(fread(&user, sizeof(data), 1, user_data) == 1){
         printf("%i. Username  : %s\n", i, user.username);
         printf("   Password  : %s\n", user.password);
-        printf("   Balances  : $%i\n", user.balances);
+        printf("   Balances  : %s$%i\n"RESET, (user.balances <= 0) ? RED : GRN, user.balances);
         printf("\n");
         i++;
     }
@@ -783,39 +740,123 @@ void nuke(){
     back();
 }
 
-void idk(){
+void cheat_screen(){
+    void cheat_credits();
+    void cheat_games();
+    int input;
+
+    while(1){
+        system("clear");
+        printf( MAG"Which cheat do you want to apply?\n"
+            GRN "1 : Change the amount of credit\n"RESET
+                "2 : Always win on slot\n"
+                "3 : Always win on coin toss\n"
+                "4 : Always win on rng\n"
+            RED "0 : Return to previous Selection\n"RESET
+                "Your input: "
+        );
+        scanf("%i", &input); getchar();
+        switch (input){
+            case 1 :
+                cheat_credits();
+                break;
+            case 2 :
+            case 3 :
+            case 4 :
+                cheat_games(input);
+                break;
+            case 0 :
+                return;
+            default :
+                printf(RED"Please choose the correct option > w <\n"RESET);
+                back();
+                break;
+        }
+    }
+    update_data();
+}
+
+void cheat_credits(){
+    int new;
+    int found = 0;
+    FILE *user_data = fopen("data.dat", "rb+");
+
     system("clear");
-    printf("                               --.+.                             \n");
-    printf("                    -.----++############        -                \n");
-    printf("              .---------------.-----#########                    \n");
-    printf("          .  .---.----------------------+#######                 \n");
-    printf("        .   .-----------------------.-----.-#######              \n");
-    printf("        ..-------------- ---------------------#######            \n");
-    printf("      ..-.------ - -.--- ---.-------------------########         \n");
-    printf("    .. .------- - -.---   ---..-- ---------------#######  #      \n");
-    printf("    .  -----.----------  ----- -------------------########       \n");
-    printf("   .   ---------.------ -+.---. -------------------##### ## #    \n");
-    printf("     .----------------- +++ --.-----.--.- ----------####  ###    \n");
-    printf("    .---------- -------.++--- -+--+----- ------------####  ##    \n");
-    printf("  ..-.--------- .--+---.-++--.+.. +++---- .----------+###  ##    \n");
-    printf(".   .----.-.-...+--..---.---.-++++++++ --. -----.-----###  ##.   \n");
-    printf("   - ----.-..  ..+--.-----++++++--.--++    ------------######    \n");
-    printf("     ----.-.- -+++++++----------           -------------#####    \n");
-    printf("  - -----.---+-+-------------------     -. --------------####    \n");
-    printf("    ------.---       ------------------#  .--------------## #    \n");
-    printf(" .  ------.. .-  .---------------------+.-.------ + ------##  ## \n");
-    printf(" -- -------.-  .----------------++------.--------  ++------+#    \n");
-    printf(" #-  ------- -#.------+-++++ -----+++++-.-------. ++.----+--+#-  \n");
-    printf("  +- -------.+#-----+++ ---------- +++++.+-------    ----#---####\n");
-    printf("   #- ----- ..+----++++------------+++++.+------+   -----#----# +\n");
-    printf("     ----.- .. +-++++++ ---.---.. ++++++- ------#    ----#+----# \n");
-    printf("     #---.--   -++++++++++++++++++++++--+-------#    ----##-----#\n");
-    printf("     #.------   -++++++++++++++++++++- + ------##     ----##-----\n");
-    printf("     #.------     .- -++++++++++++- +.  .------##     ----## .---\n");
-    printf("     . .-----.                          -- ---##      .- -+##   -\n");
-    printf("    #   ------                          ------##       .---###   \n");
-    printf("    +.  ------                   ...... - ---+##        .---###  \n");
-    printf("   #--  ------              ... ........-.---##+          ---####\n");
+    if (view()) {back(); return;}
+    if (check(user_data)) return;
+    else user_data = fopen("data.dat","rb+");
+
+    printf(MAG"Which user do you want to chose? "RESET);
+    fgets(temp.username, sizeof(temp.username), stdin);
+    temp.username[strlen(temp.username) - 1] = '\0';
+
+    while(fread(&record, sizeof(data), 1, user_data) == 1){
+        if (strcmp(record.username, temp.username) == 0){
+            current = record;
+            found = 1;
+        }
+    }
+    if (!found) {
+        printf(RED"\nSorry, user doesnt exist!\n"RESET);
+        fclose(user_data);
+        back();
+        return;
+    }
+
+    printf("\nNew credits (previous = %i) : ", current.credits);
+    scanf("%i", &new); getchar();
+
+    current.credits += new;
+    printf("Credits changed to"GRN" %i\n"RESET, current.credits);
+    update_data();
+    back();
+}
+
+void cheat_games(int input){
+    int i;
+
+    if      (input == 2) i = 0;
+    else if (input == 3) i = 1;
+    else    i = 2;
+
+    system("clear");
+
+    printf(RED  "[!]"MAG"Note that this change is temporary until the program closes"RED"[!]"RESET);
+    printf(     "\nPrevious value: %s\n", 
+                (cheat[i] == 1) ? BLU"True"RESET : RED"False"RESET);
+    printf(YEL  "Change? (Y/n) : "RESET);
+
+    if (confirm() == 1) {
+        if (cheat[i] == 0){
+            cheat[i] = 1;
+        }else cheat [i] = 0;
+        printf( "\nSuccessfully changed to %s\n", 
+                (cheat[i] == 1) ? BLU"True"RESET : RED"False"RESET);
+    } else{
+        printf( RED"\nNo change was made...\n"RESET);
+    }
+    back();
+}
+
+void ascii(){
+    FILE * ascii = fopen("ascii.txt", "r");
+    char limit[255];
+    char *stat; // Check whether the line reach EOF
+    system("clear");
+
+    if(!ascii){
+        printf(RED"No ascii.txt file was found\n"RESET);
+        back();
+        return;
+    }
+
+    // Basically print every line in ascii.txt file
+    while (stat){
+        stat = fgets(limit, sizeof(limit), ascii);
+        printf("%s", limit);
+    }
+
+    fclose(ascii);
     back();
 }
 
