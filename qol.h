@@ -37,7 +37,6 @@ int check(FILE *data){
     // If the file doesnt exist
     if (!data) {
         printf(RED"There is no one yet (>_<)\n"RESET);
-        fflush(stdout); sleep(1);
         return 1;
     }
 
@@ -47,7 +46,6 @@ int check(FILE *data){
 
     if (size <= 0) {
         printf(RED"There is no one yet (>_<)\n"RESET);
-        fflush(stdout); sleep(1);
         return 1;
     }
     else return 0;
