@@ -751,7 +751,7 @@ void banned(){
         }
     }
     if (exist){
-        printf(GRN"\nSuccessfully banneding "BLU"\"%s\"\n"RESET, input);
+        printf(GRN"\nSuccessfully banning "BLU"\"%s\"\n"RESET, input);
     } else{
         printf(RED"\nThere is no user with that name! (>_<)\n"RESET);
     }
