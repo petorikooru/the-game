@@ -11,6 +11,8 @@ int auth;
 typedef struct{
     char username[32+1];
     char password[32+1];
+    char message[254+1];
+    int banned;
     int balances;
     int credits;
     int counter[4]; // Gambling counter
@@ -37,6 +39,7 @@ void achievement();
 /* Admin */
 void admin_screen();
 int view();
+void banned();
 void nuke();
 void update_data();
 
@@ -55,7 +58,7 @@ void start_screen(){
                 BLU "User, please select one of these option!\n"RESET
                     "1. Login\n"
                     "2. Sign in\n"
-                    "3. Leaderboard\n"
+                YEL "3. Leaderboard\n"
                 RED "0. Exit\n"RESET
                     "Your input : ");
         scanf("%i", &input); getchar();
@@ -143,6 +146,13 @@ void login(){
         printf(RED"User not found!\n"RESET);
         *auth_ptr = 0;
     }
+
+    if (current.banned) {
+        printf(RED"\nUnfortunately, the admin has banned you due to this reason :\n"RESET);
+        printf("-> %s\n\n", current.message);
+        *auth_ptr = 0;
+    }
+    
     fclose(user_data);
     back();
     return;
@@ -215,6 +225,7 @@ void sign_up(){
     }
 
     // Reset the counter
+    temp.banned = 0;
     memset(temp.counter, 0, sizeof(temp.counter));
     memset(temp.persist, 0, sizeof(temp.persist));
 
@@ -281,8 +292,8 @@ void leaderboard(){
     printf(BLU"\t  ::: Leaderboard :::\n"RESET);
     printf(MAG  "Rank\tName\t\tGambled\tBalances\n"RESET);
     for (int i = 0; i < total_users; i++) {
-        printf( "%2i." "\t" "%-10s" "\t" YEL"%-3i" "\t" "%s" "$%i\n"RESET, 
-                i + 1, user[i].username, user[i].counter[3], 
+        printf( "%2i." "\t" "%s%-10s"RESET "\t" YEL"%-3i" "\t" "%s" "$%i\n"RESET, 
+                i + 1, (user[i].banned) ? RED : RESET, user[i].username, user[i].counter[3], 
                 (user[i].balances<= 0) ? RED : GRN, user[i].balances
         );
     }
@@ -302,8 +313,9 @@ void main_screen(){
                     "1 : Slot\n"
                     "2 : Coin\n"
                     "3 : Random Number Generator\n"
-                BLU "8 : Achievement\n"RESET
-                GRN "9 : Buy Credits\n"RESET
+                YEL "7 : Leaderboard\n"
+                BLU "8 : Achievement\n"
+                GRN "9 : Buy Credits\n"
                 RED "0 : Exit\n"RESET
                     "Your input: ", 
                 current.username, (current.balances<= 0) ? RED : GRN, current.balances, current.credits
@@ -319,6 +331,9 @@ void main_screen(){
                 break;
             case 3:
                 rng();
+                break;
+            case 7:
+                leaderboard();
                 break;
             case 8:
                 achievement();
@@ -614,7 +629,7 @@ void achievement(){
         current.persist[0] = 1;
         track = 1;
     }
-    if (current.balances >= 1000 && current.counter[3] >= 100|| current.persist[1] == 1){
+    if (current.balances >= 1000 && current.counter[3] >= 100 || current.persist[1] == 1){
         printf("- "MAG"Masterful Gambit "RESET": Earned"GRN" $1000\n"RESET);
         current.persist[1] = 1;
         track = 1;
@@ -644,8 +659,9 @@ void admin_screen(){
         printf( MAG "Hello Mr. Admin!\n"
                     "What do you want to select? >///<\n"RESET
                     "1. View Registered user\n"
-                    "2. Remove User\n"
-                    "3. Cheat\n"
+                    "2. Ban User\n"
+                    "3. Remove User\n"
+                GRN "8. Cheat\n"
                 BLU "9. ASCII art\n"
                 RED "0. Exit\n"RESET
                     "Your input : ");
@@ -656,9 +672,12 @@ void admin_screen(){
                 back();
                 break;
             case 2 :
-                nuke();
+                banned();
                 break;
             case 3 :
+                nuke();
+                break;
+            case 8 :
                 cheat_screen();
                 break;
             case 9 :
@@ -691,12 +710,54 @@ int view(){
         printf("%i. Username  : %s\n", i, user.username);
         printf("   Password  : %s\n", user.password);
         printf("   Balances  : %s$%i\n"RESET, (user.balances <= 0) ? RED : GRN, user.balances);
+        printf("   Credits   : %i\n", user.credits);
         printf("\n");
         i++;
     }
 
     fclose(user_data);
     return 0;
+}
+
+void banned(){
+    FILE *user_data = fopen("data.dat", "rb");
+
+    // View Registered user
+    if (view()) {back(); return;}
+
+    // Name input
+    char input[32+1];
+    char message[254+1];
+    printf(RED"Which user do you want to banned?\n"RESET);
+    printf(YEL"Your input : "RESET); 
+    fgets(input, sizeof(input), stdin);
+    input[strlen(input) - 1] = '\0';
+
+    int exist = 0;
+    rewind(user_data);
+    while(fread(&record, sizeof(record), 1, user_data) == 1){
+        if (strcmp(record.username, input) == 0){
+            exist = 1;
+            current = record;
+            current.banned = 1;
+
+            printf(MAG"\nReason for ban?\n"RESET);
+            printf(YEL"Your input : "RESET);
+            fgets(message, sizeof(message), stdin);
+            message[strlen(message) - 1] = '\0';
+
+            strcpy(current.message,message);
+            update_data();
+        }
+    }
+    if (exist){
+        printf(GRN"\nSuccessfully banneding "BLU"\"%s\"\n"RESET, input);
+    } else{
+        printf(RED"\nThere is no user with that name! (>_<)\n"RESET);
+    }
+
+    fclose(user_data);
+    back();
 }
 
 void nuke(){
