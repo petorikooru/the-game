@@ -147,7 +147,7 @@ void login(){
         *auth_ptr = 0;
     }
 
-    if (current.banned) {
+    if (current.banned && found == 1) {
         printf(RED"\nUnfortunately, the admin has banned you due to this reason :\n"RESET);
         printf("-> %s\n\n", current.message);
         *auth_ptr = 0;
@@ -182,19 +182,21 @@ void sign_up(){
         fgets(temp.username, sizeof(temp.username), stdin);
         temp.username[strlen(temp.username) - 1] = '\0';
 
+        if (strcmp("admin", temp.username) == 0){
+                printf(RED"\nNuh uh! You cannot do that!\n"RESET);
+                back();
+                return;
+        }
+
         // Check if the username already exists
         while(fread(&record, sizeof(data), 1, user_data) == 1){
             if (strcmp(record.username, temp.username) == 0){
                 printf(RED"\nUser with the same name already exists!\n"RESET);
                 exist = 1;
                 break;
+                }
             }
-            if (strcmp("admin", temp.username) == 0){
-                printf(RED"\nNuh uh! You cannot do that!\n"RESET);
-                exist = 1;
-                break;
-            }
-        }
+            
         if (exist) {
             printf(YEL"Quit? (Y/n)"RESET); if(confirm()) return;
             system("clear");
@@ -244,7 +246,7 @@ void sign_up(){
     
     printf(MAG  "Transfering..."RESET);
     loading();
-    printf(BLU  "Thank you for registering \\(>∇<)/\n" RESET
+    printf(BLU  "Thank you for registering \\(> v <)/\n" RESET
                 "As for your registration, you will get "GRN"10 free credits!\n"RESET
     );
     back();
@@ -728,7 +730,7 @@ void banned(){
     // Name input
     char input[32+1];
     char message[254+1];
-    printf(RED"Which user do you want to banned?\n"RESET);
+    printf(RED"Which user do you want to be banned?\n"RESET);
     printf(YEL"Your input : "RESET); 
     fgets(input, sizeof(input), stdin);
     input[strlen(input) - 1] = '\0';
