@@ -87,6 +87,7 @@ void start_screen(){
 }
 
 void login(){
+    
     FILE *user_data;
     auth = 0;
 
@@ -130,11 +131,16 @@ void login(){
     while(fread(&record,sizeof(data), 1, user_data) == 1){
         if (strcmp(record.username, temp.username) == 0){
             found = 1;
+
             // Check the password
             if (strcmp(record.password, temp.password) == 0){
                 printf(BLU"Login Successfull!\n"RESET);
-                current = record; 
-                *auth_ptr = 1;
+                current = record;
+                if (current.banned) {
+                    printf(RED"\nUnfortunately, the admin has banned you due to this reason :\n"RESET);
+                    printf("-> %s\n\n", current.message);
+                    *auth_ptr = 0;
+                }else *auth_ptr = 1;
             } else{
                 printf(RED"Password incorrect!\n"RESET);
                 *auth_ptr = 0;
@@ -145,13 +151,7 @@ void login(){
     if (!found){
         printf(RED"User not found!\n"RESET);
         *auth_ptr = 0;
-    }
-
-    if (current.banned && found == 1) {
-        printf(RED"\nUnfortunately, the admin has banned you due to this reason :\n"RESET);
-        printf("-> %s\n\n", current.message);
-        *auth_ptr = 0;
-    }
+    } 
     
     fclose(user_data);
     back();
@@ -294,9 +294,10 @@ void leaderboard(){
     printf(BLU"\t  ::: Leaderboard :::\n"RESET);
     printf(MAG  "Rank\tName\t\tGambled\tBalances\n"RESET);
     for (int i = 0; i < total_users; i++) {
-        printf( "%2i." "\t" "%s%-10s"RESET "\t" YEL"%-3i" "\t" "%s" "$%i\n"RESET, 
-                i + 1, (user[i].banned) ? RED : RESET, user[i].username, user[i].counter[3], 
-                (user[i].balances<= 0) ? RED : GRN, user[i].balances
+        printf( "%2i." "\t%-10s" "\t" YEL"%-3i" "\t%s" "$%i" RESET "\t%s\n", 
+                i + 1, user[i].username, user[i].counter[3], 
+                (user[i].balances<= 0) ? RED : GRN, user[i].balances,
+                (user[i].banned) ? RED"(banned)"RESET : ""
         );
     }
     back();
@@ -709,7 +710,8 @@ int view(){
     printf(MAG"List of registered user :\n"RESET);
     int i = 1;
     while(fread(&user, sizeof(data), 1, user_data) == 1){
-        printf("%i. Username  : %s\n", i, user.username);
+        printf("%i. Username  : %s", i, user.username);
+        printf("%s\n", (user.banned) ? RED" (banned)"RESET : "");
         printf("   Password  : %s\n", user.password);
         printf("   Balances  : %s$%i\n"RESET, (user.balances <= 0) ? RED : GRN, user.balances);
         printf("   Credits   : %i\n", user.credits);
