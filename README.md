@@ -19,7 +19,7 @@ Additional options :
 Planned Features :
 1. Login and Sign-up [Done]
 2. Leaderboard [Done]
-3. Replace scanf with sscanf+fgets (memory safety reason)
-4. ncurses integration so it will look much nicer (nvm)
+3. Replace scanf with sscanf+fgets (memory safety reason) [Done]
+4. ~~ncurses integration so it will look much nicer~~ (nvm)
 5. idk, something that will comes up in my dream
 
