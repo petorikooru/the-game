@@ -1,22 +1,22 @@
-// Library
-#include <string.h>
-#include <time.h>
+/* To properly run it on windows cmd, change "clear" on system() to "cls" */
+
+// Library (included all in qol.h)
 #include "qol.h"
 
 // Options
-int cheat[3] = {0};
-int auth;
+bool cheat[3] = {0};
+int auth, opt;
 
-// Personal user data (see who's the true gambler)
+/* ====================== User Data ======================= */
 typedef struct{
-    char username[32+1];
-    char password[32+1];
-    char message[254+1];
-    int banned;
+    char username   [32+1];
+    char password   [32+1];
+    char message    [254+1]; // Display ban message
     int balances;
     int credits;
-    int counter[4]; // Gambling counter
-    int persist[3]; // Related to achievement
+    int counter     [4]; // Gambling counter
+    bool persist    [3]; // Related to achievement
+    bool banned;
 } data;
 data current;   // Logged in user data
 data temp;      // Temporary data
@@ -24,6 +24,7 @@ data record;    // Recorded data
 
 /* Game Center! See who's the most gamble addicted person! */
 
+/* ================== Function Prototype ================== */
 /* Start Menu */
 void start_screen();
 void login();
@@ -38,12 +39,16 @@ void market();
 void achievement();
 /* Admin */
 void admin_screen();
-int view();
+bool view();
 void banned();
 void nuke();
 void update_data();
+/* Cheat screen */
+void cheat_screen();
+void cheat_credits();
+void cheat_games();
 
-/* Login Menu */
+/* ===================== Start Menu ======================= */
 int main(){
     srand(time(NULL)); // Start the gambling mode
     start_screen();
@@ -51,7 +56,6 @@ int main(){
 }
 
 void start_screen(){
-    int input;
     while(1){
         system("clear");
         printf( MAG "Welcome to Game Center, where you can play numerous of games!\n"RESET
@@ -61,8 +65,8 @@ void start_screen(){
                 YEL "3. Leaderboard\n"
                 RED "0. Exit\n"RESET
                     "Your input : ");
-        scanf("%i", &input); getchar();
-        switch (input){
+        if (!num_input(&opt)) continue;
+        switch (opt){
             case 1 :
                 login();
                 if      (auth == 1) main_screen();
@@ -87,7 +91,6 @@ void start_screen(){
 }
 
 void login(){
-    
     FILE *user_data;
     auth = 0;
 
@@ -106,8 +109,8 @@ void login(){
     temp.password[strlen(temp.password) - 1] = '\0';
 
     // Match username and password with in the database
-    int *auth_ptr = &auth;
-    int found = 0;
+    int * auth_ptr = &auth;
+    bool found = false;
 
     // Admin login
     if (strcmp(temp.username, "admin") == 0){
@@ -124,13 +127,13 @@ void login(){
     
     // User login
     user_data = fopen("data.dat","rb");
-    if (check(user_data)) {back(); return;}
+    if (!check(user_data)) {back(); return;}
     else user_data = fopen("data.dat","rb");
 
     // Check if the user input is the same as recorded one
     while(fread(&record,sizeof(data), 1, user_data) == 1){
         if (strcmp(record.username, temp.username) == 0){
-            found = 1;
+            found = true;
 
             // Check the password
             if (strcmp(record.password, temp.password) == 0){
@@ -160,8 +163,6 @@ void login(){
 
 void sign_up(){
     FILE *user_data = fopen("data.dat", "rb");
-    
-    system("clear");
 
     // Create a new binary if it doesn't exist yet
     if (!user_data) {
@@ -171,8 +172,9 @@ void sign_up(){
     }
 
     // Username Registration
+    system("clear");
     while (1){
-        int exist = 0;
+        bool exist = false;
         
         printf(BLU"::: Sign Up :::\n"RESET);
         printf("Username :\n");
@@ -192,7 +194,7 @@ void sign_up(){
         while(fread(&record, sizeof(data), 1, user_data) == 1){
             if (strcmp(record.username, temp.username) == 0){
                 printf(RED"\nUser with the same name already exists!\n"RESET);
-                exist = 1;
+                exist = true;
                 break;
                 }
             }
@@ -220,6 +222,7 @@ void sign_up(){
         if (strlen(temp.password) == 0) {
             printf(RED"Password cannot be blank!\n"RESET);
             printf(YEL"Quit? (Y/n)"RESET); if(confirm()) return;
+
             system("clear");
             printf(BLU"::: Sign Up :::\n"RESET);
             printf("Username : %s\n", temp.username);
@@ -227,24 +230,38 @@ void sign_up(){
     }
 
     // Reset the counter
-    temp.banned = 0;
+    temp.credits = 10;
+    temp.banned  = false;
     memset(temp.counter, 0, sizeof(temp.counter));
     memset(temp.persist, 0, sizeof(temp.persist));
 
     printf(GRN"Registration completed!\n"RESET);
-    fflush(stdin); sleep(1);
+    mini_loading();
 
     // First time Setup
-    system("clear");
-    printf( MAG "You must be new here :shake_hand:\n"RESET
-                "Welcome to your \"first time\" main menu!\n"
-                "To be able to play the game, you need to transfer\n"
-                "some amount of money first to us :3\n\n"
-            BLU "Enter the amount of money that you want : "RESET"$"
-    ); 
-    scanf("%d", &temp.balances); getchar();
+    while (1){
+        system("clear");
+        printf( MAG "You must be new here :shake_hand:\n"RESET
+                    "Welcome to your \"first time\" main menu!\n"
+                    "To be able to play the game, you need to transfer\n"
+                    "some amount of money first to us :3\n\n"
+                BLU "Enter the amount of money that you want : "RESET"$"
+        ); 
+        if (num_input(&temp.balances)) break;
+    }
+
+    // If user input negative balances (they are in debt basically)
+    if (temp.balances <= 0) 
+         printf( MAG "Do you want to borrow " RED"$%i?"RESET" (Y/n) : ", temp.balances);
+    else printf(MAG"Are you sure? "RESET"(Y/n)");
     
-    printf(MAG  "Transfering..."RESET);
+    if (!confirm()) {
+        printf( "\nTransaction cancelled! "BLU"> v < \n"RESET);
+        back();
+        return;
+    }
+    
+    printf(MAG  "\nTransfering..."RESET);
     loading();
     printf(BLU  "Thank you for registering \\(> v <)/\n" RESET
                 "As for your registration, you will get "GRN"10 free credits!\n"RESET
@@ -252,8 +269,7 @@ void sign_up(){
     back();
 
     // Write the data
-    temp.credits = 10;
-    user_data = fopen("data.dat", "ab");
+    user_data    = fopen("data.dat", "ab");
     fwrite(&temp, sizeof(temp), 1, user_data);
     fclose(user_data);
 
@@ -262,7 +278,7 @@ void sign_up(){
 
 void leaderboard(){
     FILE *user_data = fopen("data.dat", "rb");
-    if (check(user_data)) {back(); return;}
+    if (!check(user_data)) {back(); return;}
     else user_data = fopen("data.dat","rb");
 
     system("clear");
@@ -270,19 +286,20 @@ void leaderboard(){
     // Basically count how many player registered
     fseek(user_data, 0, SEEK_END);
     long size = ftell(user_data);  // the file size
-    fseek(user_data, 0, SEEK_SET);
-    int total_users = size / sizeof(data); // by default it is 100 bytes
+    int total_users = size / sizeof(data); // by default, the size of data is 100 bytes
 
     // Array things [i]
     data *user =  malloc(size) ;
+    rewind(user_data);
     fread(user, sizeof(data), total_users, user_data);
     fclose(user_data); // Close the file so it wont overwrite
 
     // Insertion Sort (from the highest)
-    for (int i = 0; i <= total_users-1; i++){
-        int temp = user[i].counter[3]; // Gambling Counter
+    int temp, i, j;
+    for (i=0; i <= total_users-1; i++){
+        temp = user[i].counter[3]; // Gambling Counter
         data new = user[i];
-        int j = i;
+        j = i;
         while (j > 0 && temp > user[j-1].counter[3]){
             user[j] = user[j - 1];
             j = j - 1;
@@ -303,13 +320,10 @@ void leaderboard(){
     back();
 }
 
-/* Game Menu */ 
-void main_screen(){
-    int input;
-    
+/* ====================== Game Menu ======================= */
+void main_screen(){ 
     while (1){
         system("clear");
-        
         printf( BLU "Do you love gambling, "MAG"%s"RESET"? ""I do and You are in the right place! "
                     "Which game do you want to play?\n"
                     "[Balances : %s$%i"RESET"]" " [Credits : "MAG"%i"RESET"]\n"          
@@ -323,9 +337,8 @@ void main_screen(){
                     "Your input: ", 
                 current.username, (current.balances<= 0) ? RED : GRN, current.balances, current.credits
         );
-        
-        scanf("%i", &input); getchar();
-        switch (input){
+        if (!num_input(&opt)) continue;
+        switch (opt){
             case 1:
                 slot();
                 break;
@@ -347,16 +360,18 @@ void main_screen(){
             case 0:
                 system("clear");
                 printf(CURSOR_H);
+
                 if (current.balances < 0) {
                     printf( RED "You are in debt for $%i!\n"
-                                "Please pay it or else debt collector will haunt you > w <!!!\n"
+                                "Please pay it or else debt collector will haunt you > w <!!!\n\n"
                             RESET, current.balances);
                     }
+
                 printf(MAG"Thank you for Playing!\n"RESET);
                 printf(MAG"Exiting...\n"RESET);
+
                 update_data();
-                sleep(1);
-                printf(CURSOR_E);
+                mini_loading();
                 return;
             default:
                 printf(RED"Invalid option inputted, Please select the correct one...\n"RESET);
@@ -367,7 +382,6 @@ void main_screen(){
 }
 
 void slot(){
-
     system("clear");
     printf( BLU "::: Madoka Slot Machine!!! :::\n"RESET
                 "Pretty much just your regular slot game\n"
@@ -394,6 +408,7 @@ void slot(){
             if (cheat[0] == 1) value[i] = 7; // Cheat code (why)
             else value[i] = rand() % (9); 
         }
+
         printf( BLU"    ===================\n"RESET
                 BLU"    |  "RESET"[%i]  [%i]  [%i]  "BLU"|--"RED"O\n"RESET
                 BLU"    ===================\n"RESET,
@@ -420,17 +435,17 @@ void slot(){
             printf("\n");
         }
 
-        printf("Continue playing!? (Y/n) ");
-        if (confirm() == 0) break;
+        printf(YEL"Continue playing!? (Y/n) "RESET);
+        if (!confirm()) break;
 
         current.credits--;
         current.counter[0]++;
     }
+
     update_data();
 }
 
 void coin(){
-
     system("clear");
     printf( BLU "::: Coin Toss!!! :::\n"RESET
                 "The classic coin toss\n"
@@ -454,41 +469,41 @@ void coin(){
 
         printf(     "Input your guess\n" 
                 YEL "[Head(0)/Tail(1)] : "RESET); 
-        scanf("%i", &guess); getchar();
+        if (!num_input(&guess)) continue;
         if (guess != 0 && guess != 1){
             printf(RED"Please input correctly >w< !\n"RESET);
             back();
+            continue;
         }
-        else{
-            // Cheat code (why)
-            if (cheat[1] == 1){
-                guess = coin;
-            }
-            // If correct
-            if (guess == coin){
-                printf("You just get "GRN"$20!\n"RESET);
-                current.balances += 20;
-            }
-            else {
-                printf( RED "Too bad...\n"RESET
-                            "The actual face = "MAG"%s\n"RESET, 
-                        (coin == 0) ? "Head" : "Tail"  ); 
-            }
-            printf("Continue playing!? (Y/n) ");
-
-            if (confirm() == 0) break;
-
-            current.credits--;
-            current.counter[1]++;
-            system("clear"); 
+   
+        // Cheat code (why)
+        if (cheat[1] == 1){
+            guess = coin;
         }
+        // If correct
+        if (guess == coin){
+            printf("You just get "GRN"$20!\n"RESET);
+            current.balances += 20;
+        }
+        else {
+            printf( RED "Too bad...\n"RESET
+                        "The actual face = "MAG"%s\n"RESET, 
+                    (coin == 0) ? "Head" : "Tail"  ); 
+        }
+        printf(YEL"Continue playing!? (Y/n) "RESET);
+        if (confirm() == 0) break;
+
+        current.credits--;
+        current.counter[1]++;
+        system("clear"); 
+
     }
+
     update_data();
     return;
 }
 
 void rng(){
-
     system("clear");
     printf( BLU "::: Random Number Guesser!!! :::\n"RESET
                 "It is quite a simple game\n"
@@ -513,47 +528,49 @@ void rng(){
         }
 
         printf("Input your guess : "); 
-        scanf("%i", &guess); getchar();
+        if (!num_input(&guess)) continue;
 
         if (guess < 1 || guess > 100){
             printf(RED"\nPlease input correctly >w< !\n"RESET);
             back();
-        } else {
-            // Cheat code (why)
-            if (cheat[2] == 1){
-                num = guess;
-            }
-
-            // If they are the same
-            if (guess == num){
-                printf("\nNo way, you are right on the money! You just get "GRN"$500!\n"RESET);
-                current.balances += 500;
-            }
-            // If +- 5 differences
-            else if (guess >= num-5 && guess <= num+5){
-                printf("\nYou are just "MAG"%i "RESET"number away!\n", num - guess);
-                printf("The actual number = "MAG"%i\n"RESET, num);
-                printf("You just get "GRN"$50!\n"RESET);
-                current.balances += 50;
-            } 
-            // If miss
-            else {
-                printf( RED "\nToo bad...\n"RESET);
-                printf(     "The actual number = "MAG"%i\n"RESET, num);
-            }
-            printf("Continue playing!? (Y/n) ");
-            if (confirm() == 0) break;
-
-            current.credits--;
-            current.counter[2]++;
-            system("clear");
+            continue;
         }
+        // Cheat code (why)
+        if (cheat[2] == 1){
+            num = guess;
+        }
+        // If they are the same
+        if (guess == num){
+            printf("\nNo way, you are right on the money! You just get "GRN"$500!\n"RESET);
+            current.balances += 500;
+        }
+        // If +- 5 differences
+        else if (guess >= num-5 && guess <= num+5){
+            printf("\nYou are just "MAG"%i "RESET"number away!\n", num - guess);
+            printf("The actual number = "MAG"%i\n"RESET, num);
+            printf("You just get "GRN"$50!\n"RESET);
+            current.balances += 50;
+        } 
+        // If miss
+        else {
+            printf( RED "\nToo bad...\n"RESET);
+            printf(     "The actual number = "MAG"%i\n"RESET, num);
+        }
+
+        printf(YEL"Continue playing!? (Y/n) "RESET);
+        if (confirm() == 0) break;
+
+        current.credits--;
+        current.counter[2]++;
+        system("clear");
     }
+
     update_data();
     return;
 }
 
 void market(){
+    int add, diff, cost, change;
 
     system("clear");
     printf( BLU "::: Market!!! :::\n"RESET
@@ -561,10 +578,9 @@ void market(){
                 "Hh-how much do you want to pay T-T ?\n"
                 "Credits "GRN"(1 = $10) : "RESET
     );
-    int add;
-    scanf("%i", &add); getchar();   
-    int cost = 10 * add;
-    int change = current.balances - cost;
+    if (!num_input(&add)) return;  
+    cost    = 10 * add;
+    change  = current.balances - cost;
 
     if (add < 0){
         printf(RED"Nuh uh... Too bad you can't do that (·ω·)\n"RESET);
@@ -576,87 +592,82 @@ void market(){
         return;
     }
     else if (change < 0){
-        int diff; 
-        if (current.balances >= 0) diff = cost - current.balances; // Non-negative balances
+        if (current.balances >= 0) 
+             diff = cost - current.balances; // Non-negative balances
         else diff = cost; // Negative balances
+
         printf( MAG "Do you want to borrow " RED"$%i?"RESET" (Y/n) : ", diff);
-    }else printf(MAG"Are you sure? "RESET"(Y/n)");
+    }
+    else printf(MAG"Are you sure? "RESET"(Y/n)");
 
     if (confirm() == 0) {
         printf("Transaction cancelled! "BLU"> v < \n"RESET);
         back();
         return;
     }
+
     system("clear");
 
     printf(MAG"Transfering..."RESET);
-    loading();
     current.credits += add;
     current.balances -= 10 * add;
+    loading();
     
-    printf(GRN  "Money transfered!"RESET" Current balances : ");
-    printf(     "%s$%i\n"RESET, (current.balances <= 0) ? RED : GRN, current.balances);
-    printf(     "Erm... please gamble responsibly T-T...\n");
+    printf(GRN "Money transfered!"RESET" Current balances : %s$%i\n"RESET
+               "Erm... please gamble responsibly T-T...\n",       
+               (current.balances <= 0) ? RED : GRN, current.balances
+    );
+
     update_data();
     back();
     return;
 }
 
 void achievement(){
- 
-    int track = 0;
-    system("clear"); 
+    bool track      = false;
+    int  counter[]  = {10, 50, 100};
+    char *colors[]  = {GRN, MAG, RED};
+    char *game[]    = {"Slot","Coin Toss","Random Number Guesser"};
 
+    system("clear"); 
     printf(MAG"Your achievement :\n"RESET);
-    char *game[] = {"Slot","Coin Toss","Random Number Guesser"};
 
     for(int i=0; i < 3; i++){
-        if (current.counter[i] >= 10) {
-            printf("- Play "BLU"%s"RESET" for "GRN"10 times\n"RESET, 
-            game[i]);
-            track = 1;
-        }
-        if (current.counter[i] >= 50) {
-            printf("- Play "BLU"%s"RESET" for "MAG"50 times\n"RESET, 
-            game[i]);
-            track = 1;
-        }
-        if (current.counter[i] >= 100) {
-            printf("- Play "BLU"%s"RESET" for "RED"100 times\n"RESET, 
-            game[i]);
-            track = 1;
+        for(int j=0; i < 3; i++){
+            if (current.counter[i] >= counter[j]) {
+                printf( "- Play "BLU"%s"RESET" for %s%i times\n"RESET, 
+                        game[i], colors[j], counter[j]
+                );
+                track = true;
+            }
         }
     }
-    if (current.balances <= -100 || current.persist[0] == 1){
+    if (current.balances <= -100 || current.persist[0] == true){
         printf("- "MAG"Debt Collector's Ghost "RESET": In "RED"debt"RESET" for more than "RED"$100\n"RESET);
-        current.persist[0] = 1;
-        track = 1;
+        current.persist[0] = true;
+        track = true;
     }
-    if (current.balances >= 1000 && current.counter[3] >= 100 || current.persist[1] == 1){
+    if (current.balances >= 1000 && current.counter[3] >= 100 || current.persist[1] == true){
         printf("- "MAG"Masterful Gambit "RESET": Earned"GRN" $1000\n"RESET);
-        current.persist[1] = 1;
-        track = 1;
+        current.persist[1] = true;
+        track = true;
     }
-
-    if (current.counter[3] >= 100){
+    if (current.counter[3] >= 100 || current.persist[2] == true){
         printf("- "MAG"A True Gambler Mindset "RESET": Gambled for more than "GRN"100 times\n"RESET);
-        current.persist[1] = 1;
-        track = 1;
+        current.persist[2] = true;
+        track = true;
     }
 
-    if (track == 0){
-        printf(RED"There's no achievement yet ('A`)\n"RESET);
-    }
+    if (!track) printf(RED"There's no achievement yet ('A`)\n"RESET);
+
     update_data();
     back();
 }
 
-/* Admin */
+/* ===================== Admin Menu ======================= */
 void admin_screen(){
     void ascii();
-    void cheat_screen();
 
-    int input; 
     while(1){
         system("clear");
         printf( MAG "Hello Mr. Admin!\n"
@@ -668,8 +679,8 @@ void admin_screen(){
                 BLU "9. ASCII art\n"
                 RED "0. Exit\n"RESET
                     "Your input : ");
-        scanf("%i", &input); getchar();
-        switch (input){
+        if (!num_input(&opt)) continue;
+        switch (opt){
             case 1 :
                 view();
                 back();
@@ -688,23 +699,23 @@ void admin_screen(){
                 break;
             case 0 :
                 system("clear");
-                printf(MAG"Exiting..."RESET);
-                fflush(stdout); sleep(1);
+                printf(MAG"Exiting...\n"RESET);
+                mini_loading();
                 return;
             default :
-                printf(RED"Invalid Input!\n"RESET);
+                printf(RED"Please input correctly >w< !\n"RESET);
                 back();
                 break;
         }
     }
 }
 
-int view(){
+bool view(){
     data user;
     FILE *user_data = fopen("data.dat", "rb");
 
     system("clear");
-    if (check(user_data)) return 1;
+    if (!check(user_data)) return false;
     else user_data = fopen("data.dat","rb");
 
     printf(MAG"List of registered user :\n"RESET);
@@ -720,30 +731,30 @@ int view(){
     }
 
     fclose(user_data);
-    return 0;
+    return true;
 }
 
 void banned(){
     FILE *user_data = fopen("data.dat", "rb");
-
-    // View Registered user
-    if (view()) {back(); return;}
-
-    // Name input
     char input[32+1];
     char message[254+1];
+
+    // View Registered user
+    if (!view()) {back(); return;}
+
+    // Name input
     printf(RED"Which user do you want to be banned?\n"RESET);
     printf(YEL"Your input : "RESET); 
     fgets(input, sizeof(input), stdin);
     input[strlen(input) - 1] = '\0';
 
-    int exist = 0;
+    bool exist = false;
     rewind(user_data);
     while(fread(&record, sizeof(record), 1, user_data) == 1){
         if (strcmp(record.username, input) == 0){
-            exist = 1;
+            exist = true;
             current = record;
-            current.banned = 1;
+            current.banned = true;
 
             printf(MAG"\nReason for ban?\n"RESET);
             printf(YEL"Your input : "RESET);
@@ -752,13 +763,11 @@ void banned(){
 
             strcpy(current.message,message);
             update_data();
+            break;
         }
     }
-    if (exist){
-        printf(GRN"\nSuccessfully banning "BLU"\"%s\"\n"RESET, input);
-    } else{
-        printf(RED"\nThere is no user with that name! (>_<)\n"RESET);
-    }
+    if (exist)  printf(GRN"\nSuccessfully banning "BLU"\"%s\"\n"RESET, input);
+    else        printf(RED"\nThere is no user with that name! (>_<)\n"RESET);
 
     fclose(user_data);
     back();
@@ -769,7 +778,7 @@ void nuke(){
     FILE *temp = fopen("data_temp.dat", "wb");
 
     // View Registered user
-    if (view()) {back(); return;}
+    if (!view()) {back(); return;}
 
     // Name input
     char input[32+1];
@@ -779,11 +788,11 @@ void nuke(){
     input[strlen(input) - 1] = '\0';
 
     // Delete the user data
-    int exist = 0;
+    bool exist = false;
     rewind(user_data);
     while(fread(&record, sizeof(record), 1, user_data) == 1){
         if (strcmp(record.username, input) == 0){
-            exist = 1;
+            exist = true;
         }
         if (strcmp(record.username, input) != 0){
             fwrite(&record, sizeof(record), 1, temp);
@@ -806,10 +815,6 @@ void nuke(){
 }
 
 void cheat_screen(){
-    void cheat_credits();
-    void cheat_games();
-    int input;
-
     while(1){
         system("clear");
         printf( MAG"Which cheat do you want to apply?\n"
@@ -820,35 +825,34 @@ void cheat_screen(){
             RED "0 : Return to previous Selection\n"RESET
                 "Your input: "
         );
-        scanf("%i", &input); getchar();
-        switch (input){
+        if (!num_input(&opt)) continue;
+        switch (opt){
             case 1 :
                 cheat_credits();
                 break;
             case 2 :
             case 3 :
             case 4 :
-                cheat_games(input);
+                cheat_games(opt);
                 break;
             case 0 :
                 return;
             default :
-                printf(RED"Please choose the correct option > w <\n"RESET);
+                printf(RED"Please input correctly >w< !\n"RESET);
                 back();
                 break;
         }
     }
-    update_data();
 }
 
 void cheat_credits(){
     int new;
-    int found = 0;
+    bool found = false;
     FILE *user_data = fopen("data.dat", "rb+");
 
     system("clear");
-    if (view()) {back(); return;}
-    if (check(user_data)) return;
+    if (!view()) {back(); return;}
+    if (!check(user_data)) return;
     else user_data = fopen("data.dat","rb+");
 
     printf(MAG"Which user do you want to chose? "RESET);
@@ -858,7 +862,7 @@ void cheat_credits(){
     while(fread(&record, sizeof(data), 1, user_data) == 1){
         if (strcmp(record.username, temp.username) == 0){
             current = record;
-            found = 1;
+            found = true;
         }
     }
     if (!found) {
@@ -869,7 +873,7 @@ void cheat_credits(){
     }
 
     printf("\nNew credits (previous = %i) : ", current.credits);
-    scanf("%i", &new); getchar();
+    num_input(&new);
 
     current.credits += new;
     printf("Credits changed to"GRN" %i\n"RESET, current.credits);
@@ -888,15 +892,17 @@ void cheat_games(int input){
 
     printf(RED  "[!]"MAG"Note that this change is temporary until the program closes"RED"[!]"RESET);
     printf(     "\nPrevious value: %s\n", 
-                (cheat[i] == 1) ? BLU"True"RESET : RED"False"RESET);
+                (cheat[i]) ? BLU"True"RESET : RED"False"RESET);
     printf(YEL  "Change? (Y/n) : "RESET);
 
-    if (confirm() == 1) {
-        if (cheat[i] == 0){
-            cheat[i] = 1;
-        }else cheat [i] = 0;
+    if (confirm()) {
+        // Toogle cheat
+        if (cheat[i] == false){
+            cheat[i]    = true;
+        }else cheat [i] = false;
+
         printf( "\nSuccessfully changed to %s\n", 
-                (cheat[i] == 1) ? BLU"True"RESET : RED"False"RESET);
+                (cheat[i]) ? BLU"True"RESET : RED"False"RESET);
     } else{
         printf( RED"\nNo change was made...\n"RESET);
     }
@@ -905,8 +911,9 @@ void cheat_games(int input){
 
 void ascii(){
     FILE * ascii = fopen("ascii.txt", "r");
+    char * stat; // Check whether the line reach EOF
     char limit[255];
-    char *stat; // Check whether the line reach EOF
+    
     system("clear");
 
     if(!ascii){
@@ -916,7 +923,7 @@ void ascii(){
     }
 
     // Basically print every line in ascii.txt file
-    while (stat){
+    while(stat){
         stat = fgets(limit, sizeof(limit), ascii);
         printf("%s", limit);
     }

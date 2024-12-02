@@ -1,9 +1,12 @@
 // Library
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
 #include <unistd.h>
+#include <time.h>
 
-// Color for the text
+// Format and color for the text
 #define RED         "\x1B[31m"
 #define GRN         "\x1B[32m"
 #define YEL         "\x1B[33m"
@@ -21,23 +24,41 @@ void back(){
     system("clear");
 }
 
+/* Number Input */
+bool num_input(int * num){
+    char input[100];
+
+    fgets(input, sizeof(input), stdin);
+    input[strlen(input) - 1] = '\0';
+
+    int result = sscanf(input, "%i", num);
+    
+    if (result == 1) {
+        return true;
+    } else {
+        printf(RED"Please input correctly >w< !\n"RESET);
+        back();
+        return false;
+    }
+}
+
 /* Yes and no selection*/
-int confirm(){
+bool confirm(){
     char select[2+1];
 
     fgets(select, sizeof(select), stdin);
     select[strcspn(select, "\n")] = 0;
 
-    if (strlen(select) == 0 || select[0] == 'y' || select[0] == 'Y') return 1;
-    else return 0;
+    if (strlen(select) == 0 || select[0] == 'y' || select[0] == 'Y') return true;
+    else return false;
 }
 
 /* File size check*/
-int check(FILE *data){
+bool check(FILE *data){
     // If the file doesnt exist
     if (!data) {
         printf(RED"There is no one yet (>_<)\n"RESET);
-        return 1;
+        return false;
     }
 
     fseek(data, 0, SEEK_END);
@@ -46,9 +67,31 @@ int check(FILE *data){
 
     if (size <= 0) {
         printf(RED"There is no one yet (>_<)\n"RESET);
-        return 1;
+        return false;
     }
-    else return 0;
+    else return true;
+}
+
+/* Miniature loading animation */
+void mini_loading(){
+    int duration = 200;
+
+    printf("[—]");
+    for (int i=0; i <= duration/10; i++){
+        printf("\r"CURSOR_H);
+
+        printf("[");
+        if      (i%4 == 1)  printf(YEL"\\"RESET);
+        else if (i%4 == 2)  printf(YEL"|"RESET);
+        else if (i%4 == 3)  printf(YEL"/"RESET);
+        else                printf(YEL"—"RESET);
+        printf("]");
+
+        fflush(stdout); usleep(1000*duration/2);
+    }
+
+    printf(CURSOR_E);
+    system("clear");
 }
 
 /* Loading animation */
@@ -57,24 +100,25 @@ void loading(){
     int candy = 2; // the "o"
 
     for (int i=0; i < size/2; i++){
-        if (i==0) printf("\n[");
+        if (i==0)        printf("\n[");
         printf("%*co", candy-1, ' ');
         if (i==size/2-1) printf("]");
     }
 
     printf("\r");
     for (int i=0; i <= size; i++){
-        fflush(stdout); usleep(1000*75);
-        if (i==0) printf(CURSOR_H"[ ");
-        if (i==size) printf("]");
+        if (i==0)       printf(CURSOR_H"[ ");
+        if (i==size)    printf("]");
         else {
-            if (i == size - 1 )printf(YEL"\b-"RESET);
-            else if (i%2 >= 1) printf(YEL"\b-"MAG"C"RESET);
-            else printf(YEL"\b-"MAG"c"RESET);
+            if      (i == size - 1 ) printf(YEL"\b-"RESET);
+            else if (i%2 >= 1)       printf(YEL"\b-"MAG"C"RESET);
+            else                     printf(YEL"\b-"MAG"c"RESET);
         }
+
+        fflush(stdout); usleep(1000*75);
     }
 
-    printf(BLU" Done! (≧∇≦)\n"RESET CURSOR_E);
+    printf(BLU" Done! (≧ ∇ ≦)\n"RESET CURSOR_E);
     fflush(stdout); usleep(1000*500);
 }
 
@@ -84,23 +128,24 @@ void nuke_loading(){
 
     printf(RED"\n[!] "RESET"Tactical Nuke Incoming "RED"[!]"RESET);
     for (int i=0; i <= size; i++){
-        if (i == 0) printf("\n[");
+        if (i == 0)     printf("\n[");
         printf("-");
-        if (i == size) printf("]");
+        if (i == size)  printf("]");
     }
 
     printf("\r");
     for (int i=0; i <= size+1; i++){
-        fflush(stdout); usleep(1000*100);
-        if (i == 0) printf(CURSOR_H"[ ");
-        if (i == size+1) printf("]");
+        if (i == 0)         printf(CURSOR_H"[ ");
+        if (i == size+1)    printf("]");
         else {
-            if (i == size)printf(RED"\b*"RESET);
-            else if (i%4 == 1) printf(BLU"\b~"MAG"\\"RESET);
-            else if (i%4 == 2) printf(BLU"\b~"MAG"|"RESET);
-            else if (i%4 == 3) printf(BLU"\b~"MAG"/"RESET);
-            else printf(BLU"\b~"MAG"—"RESET);
+            if      (i == size) printf(RED"\b*"RESET);
+            else if (i%4 == 1)  printf(BLU"\b~"MAG"\\"RESET);
+            else if (i%4 == 2)  printf(BLU"\b~"MAG"|"RESET);
+            else if (i%4 == 3)  printf(BLU"\b~"MAG"/"RESET);
+            else                printf(BLU"\b~"MAG"—"RESET);
         }
+
+        fflush(stdout); usleep(1000*100);
     }
     printf(CURSOR_E);
 
