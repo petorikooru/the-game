@@ -4,9 +4,9 @@ You just lost the game!
 Welcome to Game Center, where you can play varieties of games. Do you love gambling? I do!
 
 To run, just type this in the terminal
-''
-gcc project.c
-''
+```
+gcc project_1.c
+```
 
 There are both regular user and admin, in which an admin has these features :
 1. View every user registered
