@@ -41,6 +41,7 @@ void achievement();
 void admin_screen();
 bool view();
 void banned();
+void unbanned();
 void nuke();
 void update_data();
 /* Cheat screen */
@@ -83,7 +84,7 @@ void start_screen(){
                 printf(MAG"See you next time!"RESET);
                 return;
             default :
-                printf(RED"Invalid Input!\n"RESET);
+                printf(RED"Please input correctly >w< !\n"RESET);
                 back();
                 break;
         }
@@ -374,7 +375,7 @@ void main_screen(){
                 mini_loading();
                 return;
             default:
-                printf(RED"Invalid option inputted, Please select the correct one...\n"RESET);
+                printf(RED"Please input correctly >w< !\n"RESET);
                 back();
                 break;
         }
@@ -674,7 +675,8 @@ void admin_screen(){
                     "What do you want to select? >///<\n"RESET
                     "1. View Registered user\n"
                     "2. Ban User\n"
-                    "3. Remove User\n"
+                    "3. Unban User\n"
+                    "4. Remove User\n"
                 GRN "8. Cheat\n"
                 BLU "9. ASCII art\n"
                 RED "0. Exit\n"RESET
@@ -689,6 +691,9 @@ void admin_screen(){
                 banned();
                 break;
             case 3 :
+                unbanned();
+                break;
+            case 4 :
                 nuke();
                 break;
             case 8 :
@@ -761,17 +766,71 @@ void banned(){
             fgets(message, sizeof(message), stdin);
             message[strlen(message) - 1] = '\0';
 
+            printf(MAG"Are you sure? "RESET"(Y/n)");
+             if (!confirm()) {
+                printf( "\nBanning cancelled! "BLU"> v < \n"RESET);
+                back();
+                return;
+            }
+
             strcpy(current.message,message);
             update_data();
             break;
         }
     }
-    if (exist)  printf(GRN"\nSuccessfully banning "BLU"\"%s\"\n"RESET, input);
+    if (exist)  printf(GRN"\nSuccessfully banning "RESET"\"%s\"\n", input);
     else        printf(RED"\nThere is no user with that name! (>_<)\n"RESET);
 
     fclose(user_data);
     back();
 }
+
+void unbanned(){
+    FILE *user_data = fopen("data.dat", "rb");
+    char input[32+1];
+    char message[254+1];
+
+    // View Registered user
+    if (!view()) {back(); return;}
+
+    // Name input
+    printf(BLU"Which user do you want to be unbanned?\n"RESET);
+    printf(YEL"Your input : "RESET); 
+    fgets(input, sizeof(input), stdin);
+    input[strlen(input) - 1] = '\0';
+
+    bool exist = false;
+    rewind(user_data);
+    while(fread(&record, sizeof(record), 1, user_data) == 1){
+        if (strcmp(record.username, input) == 0){
+            exist = true;
+            if (record.banned == true){
+                current = record;
+                current.banned = false;
+
+                printf(MAG"Are you sure? "RESET"(Y/n)");
+                if (!confirm()) {
+                    printf( "\nBanning cancelled! "BLU"> v < \n"RESET);
+                    back();
+                    return;
+                }
+
+                printf(GRN"\nSuccessfully unbanning "RESET"\"%s\"\n", input);
+                memset(current.message, 0 , sizeof(current.message));
+                update_data();
+                break;
+            }
+            else {
+                printf(BLU"\nUser isn't banned currently!\n"RESET);
+            }
+        }
+    }
+    if (!exist) printf(RED"\nThere is no user with that name! (>_<)\n"RESET); 
+
+    fclose(user_data);
+    back();
+}
+
 
 void nuke(){
     FILE *user_data = fopen("data.dat", "rb");
@@ -800,7 +859,7 @@ void nuke(){
     }
     if (exist){
         nuke_loading();
-        printf(GRN"\nSuccessfully deleting "BLU"\"%s\"\n"RESET, input);
+        printf(GRN"\nSuccessfully deleting "RESET"\"%s\"\n", input);
     } else{
         printf(RED"\nThere is no user with that name! (>_<)\n"RESET);
     }
@@ -912,7 +971,7 @@ void cheat_games(int input){
 void ascii(){
     FILE * ascii = fopen("ascii.txt", "r");
     char * stat; // Check whether the line reach EOF
-    char limit[255];
+    char text[255];
     
     system("clear");
 
@@ -924,8 +983,8 @@ void ascii(){
 
     // Basically print every line in ascii.txt file
     while(stat){
-        stat = fgets(limit, sizeof(limit), ascii);
-        printf("%s", limit);
+        stat = fgets(text, sizeof(text), ascii);
+        printf("%s", text);
     }
 
     fclose(ascii);
