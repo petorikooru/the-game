@@ -56,13 +56,13 @@ int main(){
 }
 
 void start_screen(){
-    int auth = 0;
-    int opt;
-
     while(1){
+        int opt;
+        int auth = 0;
+        
         clear_screen();
-        printf( MAG "Welcome to Game Center, where you can play numerous of games!  \n" RESET
-                BLU "User, please select one of these option!                       \n" RESET
+        printf( MAG "Welcome to Game Center, where you can play numerous of games!\n" RESET
+                BLU "User, please select one of these option!\n" RESET
                     "1. Login       \n"
                     "2. Sign in     \n"
                 YEL "3. Leaderboard \n"
@@ -311,10 +311,9 @@ void leaderboard(){
     printf(BLU"\t  ::: Leaderboard :::\n"RESET);
     printf(MAG  "Rank\tName\t\tGambled\tBalances\n"RESET);
     for (int i = 0; i < total_users; i++) {
-        printf( "%2i." "\t%-10s" "\t" YEL"%-3i" "\t%s" "$%i" RESET "\t%s\n", 
-                i + 1, user[i].username, user[i].counter[3], 
-                (user[i].balances<= 0) ? RED : GRN, user[i].balances,
-                (user[i].banned) ? RED"(banned)"RESET : ""
+        printf( "%2i." "\t%-10s %s" "\t" YEL"%-3i" "\t%s" "$%i" RESET "\n", 
+                i + 1, user[i].username, (user[i].banned) ? RED"🔨"RESET : "",
+                user[i].counter[3], (user[i].balances<= 0) ? RED : GRN, user[i].balances              
         );
     }
     back();
@@ -479,8 +478,8 @@ void coin(){
         }
 
         printf( "            [#]         \n");
-        printf( "     Input your guess!  \n" 
-                "["YEL" Head 😼 (0) "RESET"|"RED" Tail 🐶 (1)"RESET"] : "
+        printf( CYN"     Input your guess!  \n" RESET
+                "["YEL"Head 😼 (0)"RESET"|"RED"Tail 🐶 (1)"RESET"] : "
         );
 
         if (!num_input(&guess)) continue;
@@ -496,8 +495,8 @@ void coin(){
 
         printf(UP UP UP);
         printf( "            [%s]        \n", icon);
-        printf( "     Input your guess!  \n" 
-                "["YEL" Head 😼 (0) "RESET"|"RED" Tail 🐶 (1) "RESET"] : %i \n\n",
+        printf( CYN"     Input your guess!  \n" RESET
+                "["YEL"Head 😼 (0)"RESET"|"RED"Tail 🐶 (1)"RESET"] : %i \n",
                 guess
         ); 
   
@@ -511,9 +510,7 @@ void coin(){
             current.balances += 20;
         }
         else {
-            printf( RED "Too bad...\n"RESET
-                        "The actual face = "MAG"%s\n"RESET, 
-                    (coin == 0) ? "Head" : "Tail"  ); 
+            printf(RED "Too bad...\n"RESET);
         }
         printf(YEL"Continue playing!? (Y/n) "RESET);
         if (confirm() == 0) break;
@@ -972,12 +969,14 @@ void cheat_games(int input){
     else if (input == 3) i = 1;
     else    i = 2;
 
-    clear_screen();
+    char *sel[] = {"Slot", "Coin Toss", "RNG"};
 
-    printf(RED  "[!]"MAG"Note that this change is temporary until the program closes"RED"[!]"RESET);
-    printf(     "\nPrevious value: %s\n", 
-                (cheat[i]) ? BLU"True"RESET : RED"False"RESET);
-    printf(YEL  "Change? (Y/n) : "RESET);
+    clear_screen();
+    printf( RED "[!] "MAG"The change is in effect until the program is closed"RED" [!]\n"RESET);
+    printf( "Selected : "BLU"%s  \n"RESET
+            "Current value: %s     \n",
+            sel[i], (cheat[i]) ? BLU"True"RESET : RED"False"RESET);
+    printf(YEL "Change? (Y/n) : "RESET);
 
     if (confirm()) {
         // Toogle cheat
@@ -985,8 +984,12 @@ void cheat_games(int input){
             cheat[i]    = true;
         }else cheat [i] = false;
 
-        printf( "\nSuccessfully changed to %s\n", 
-                (cheat[i]) ? BLU"True"RESET : RED"False"RESET);
+        printf(UP UP);
+        printf( "Current value: %s     \n",
+            (cheat[i]) ? BLU"True"RESET : RED"False"RESET
+        );
+        printf(YEL "Change? (Y/n) : Y            \n\n"RESET);
+        printf(MAG "Successfully changed the value!\n"RESET);
     } else{
         printf( RED"\nNo change was made...\n"RESET);
     }
