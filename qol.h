@@ -12,10 +12,23 @@
 #define YEL         "\x1B[33m"
 #define BLU         "\x1B[34m"
 #define MAG         "\x1B[35m"
+#define CYN         "\x1B[36m"
 #define RESET       "\x1B[0m"
 #define UP          "\033[A"    // move 1 line to the top
 #define CURSOR_H    "\x1B[?25l" // hide cursor
 #define CURSOR_E    "\x1B[?25h" // enable cursor
+
+/* Clear Screen */
+void clear_screen(){
+    #if defined(_WIN32)
+        system("cls");
+    #elif defined(unix) || defined(__unix) || defined(__unix__) || defined(__APPLE__)
+        system("clear");
+    #else
+        printf("erm.... (your os is too niche sorry, but trying to clean it anyway)");
+        system("clear");
+    #endif
+}
 
 /* Go back to previous function */
 void back(){
