@@ -35,3 +35,4 @@ Planned Features :
 4. ~~ncurses integration so it will look much nicer~~ (nvm im too lazy)
 5. idk, something that will comes up in my dream
 
+For the old codes, you can check the "Old" branch.
