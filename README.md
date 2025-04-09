@@ -7,6 +7,10 @@ To compile, just type this in the terminal
 ```
 gcc project.c -o project.bin
 ```
+If you want to optimize it even further, you can type this (idk why you would want to optimize this small (and unimportant) program)
+```
+gcc project.c -o project.bin -O3
+```
 Then run with 
 ```
 ./project.bin
@@ -35,6 +39,10 @@ Planned Features :
 4. ~~ncurses integration so it will look much nicer~~ ~~(nvm im too lazy)~~ (Ended up creating an inferior version of it) [Done?]
 5. idk, something that will comes up in my dream
 
+---
+
 For the oldest codes, you can check the "Old" branch.
+
 For the code before the tui rewrite, you can check the "Rewrite" Branch.
+
 For the tui rewrite (and i guess this main before i fix something), you can check the "Another-Rewrite" Branch.
