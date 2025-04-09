@@ -1,220 +1,331 @@
-// Library (Macros and stuff go there)
+/* =========== Libraries ============= */
+/*
+    // <- already defined in another
+          file
+*/
+#include <stdbool.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+
+// Local Libraries /////////////////////
+#include "game_tui.h"
 #include "game_tools.h"
 #include "game_data.h"
-bool cheat[3] = {false};
+#include "game_textify.h"
 
-// Function Prototype
-void screen_start       ();
-void screen_start_login ();
-void screen_start_signup();
-void screen_leaderboard ();
-/* Game Menu */ 
-void screen_user            (user_t*);
-void screen_user_slot       (user_t*);
-void screen_user_coin       (user_t*);
-void screen_user_rng        (user_t*);
-void screen_user_market     (user_t*);
-void screen_user_achievement(user_t*);
-/* Admin */
-void screen_admin       ();
-void screen_admin_view  ();
-void screen_admin_ban   ();
-void screen_admin_unban ();
-void screen_admin_delete();
-void screen_fun_ascii   ();
-/* Cheat screen */
-void screen_cheat        ();
-void screen_cheat_credits();
-void screen_cheat_games  (int);
+/* ====== Prototype functions ======= */
+void ui_start       ();
+void ui_start_login ();
+void ui_start_signup();
+void ui_start_signup_setup(const char* username, 
+                           const char* password, 
+                           User *const user);
+void ui_leaderboard ();
+// User menu ///////////////////////////
+void ui_user            (User *const user);
+void ui_user_slot       (User *const user);
+void ui_user_coin       (User *const user);
+void ui_user_rng        (User *const user);
+void ui_user_market     (User *const user);
+void ui_user_achievement(User *const user);
+// Admin menu //////////////////////////
+void ui_admin       ();
+uint8_t ui_admin_view  (const bool called);
+void ui_admin_ban   ();
+void ui_admin_unban ();
+void ui_admin_delete();
+void ui_admin_export();
+void ui_fun_ascii   ();
+// Cheat menu //////////////////////////
+static bool cheat[3] = {false};
+void ui_cheat        ();
+void ui_cheat_credits();
+void ui_cheat_games  (uint8_t type);
 
 void main(){
     srand(time(NULL));
-    screen_start();
-    exit(0);
+    ui_start();
+    return;
 }
 
 /* ===================== Start Screen ======================= */
-void screen_start(){
+void ui_start(){
     typedef enum {
         LOGIN       = 1,
         SIGNUP      = 2,
         LEADERBOARD = 3,
         EXIT        = 0,
-    } selection_start_t;
-    int input;
+    } MenuStart;
+    int32_t input;
 
     while(RUNNING){
+        time_t t = time(NULL);
+        char* clock = asctime(localtime(&t));
+        clock[strlen(clock) - 1] = '\0';
+
         screen_clear();
-        printf( 
-            MAG "Welcome to Game Center, where you can play numerous of games!" CURSOR_DOWN RESET
-            BLU "User, please select one of these option!" CURSOR_DOWN RESET
-                "1. Login       " CURSOR_DOWN
-                "2. Sign in     " CURSOR_DOWN
-            YEL "3. Leaderboard " CURSOR_DOWN
-            RED "0. Exit        " CURSOR_DOWN RESET
-                "Your input : "
-        );
-        if (!sys_input_int(&input)) continue;
+        
+        screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, HEIGHT, "Main Menu", CYN);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 1, WIDTH, "Welcome to the Game Center, Gamblers!", MAG, CYN);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 2, WIDTH, "In here, you can play numerous of very fun games", MAG, CYN);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 3, WIDTH, "User, please select one of these option!", BLU, CYN);
+        screen_draw_raw(OFFSET_X, OFFSET_Y + 4, CYN, "+------------------+------------------------------------+");
+        screen_draw_line(OFFSET_X, OFFSET_Y + 5, WIDTH + 5,  "1. Login         "CYN"|", GRN, CYN);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 6, WIDTH + 10, "2. Sign in       "CYN"|"WHT"     Current time :", LME, CYN);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 7, WIDTH + 5,  "3. Leaderboard   "CYN"|", YEL, CYN);
+        screen_draw_raw(OFFSET_X + 25, OFFSET_Y + 7, YEL, "%s", clock);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 8, WIDTH + 5, "0. Exit          "CYN"|", RED, CYN);
+        screen_draw_raw(OFFSET_X, OFFSET_Y + 9, CYN, "+------------------+------------------------------------+");
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 11, WIDTH, YEL);
+        screen_draw_line_input(OFFSET_X, OFFSET_Y + 10, WIDTH, "Your input : ", YEL, YEL);
+
+        bool check = input_number(OFFSET_X, OFFSET_Y + 10, &input);
+
+        if (check == false) {
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 10, WIDTH, "Please input the number correctly >w<", RED_BG, RED);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + 12, WIDTH, RED);
+            input_continue(OFFSET_X, OFFSET_Y + 11, WIDTH); 
+            continue;
+        }
 
         switch(input){
             case LOGIN: 
-                screen_start_login();
+                ui_start_login();
                 break;
             case SIGNUP: 
-                screen_start_signup(); 
+                ui_start_signup(); 
                 break;
             case LEADERBOARD: 
-                screen_leaderboard();
+                ui_leaderboard();
                 break;
             case EXIT: 
-                screen_clear(); 
-                printf(MAG "See you next time!" CURSOR_DOWN RESET); 
+                screen_clear();
+                screen_draw_box(OFFSET_X, OFFSET_Y, WIDTH, 3, MAG);
+                screen_draw_line_center(OFFSET_X, OFFSET_Y + 1, WIDTH, "See you next time!", MAG, MAG);
+                SET_CURSOR(CURSOR_DOWN);
+                SET_CURSOR(CURSOR_DOWN);
                 return;
             default:
-                printf(RED "Please input correctly >w<" CURSOR_DOWN RESET);
-                sys_input_return(); 
+                screen_draw_line_center(OFFSET_X, OFFSET_X + 10, WIDTH, "Please input the number correctly >w<", RED_BG, RED);
+                screen_draw_line_decor(OFFSET_X, OFFSET_X + 12, WIDTH, RED);
+                input_continue(OFFSET_X, OFFSET_X + 11, WIDTH); 
                 break;
         }
     }   
 }
 
-void screen_start_login(){
+void ui_start_login(){
     screen_clear();
 
-    // Display UI
-    printf(BLU "::: Login :::" CURSOR_DOWN RESET);
-    printf(    "Username :" CURSOR_DOWN);
-    printf(    "Password :" CURSOR_DOWN);
+    // Pre-render display
+    screen_draw_box_title(OFFSET_X, OFFSET_Y + 2, WIDTH, 4, "Login", LME);
+    screen_draw_line(OFFSET_X, OFFSET_Y + 3, WIDTH, "Username : ", BLU, LME);
+    screen_draw_line(OFFSET_X, OFFSET_Y + 4, WIDTH, "Password : ", BLU, LME);
 
     // Input the username and password
     char *username, *password;
-    printf(CURSOR_UP CURSOR_UP);
-    printf(    "Username : ");
-    username = sys_input_str();
-    printf(    "Password : ");
-    password = sys_input_str();
+
+    screen_draw_line_input(OFFSET_X, OFFSET_Y + 3, WIDTH, "Username : ", BLU, LME);
+    username = input_string();
+    screen_draw_line_input(OFFSET_X, OFFSET_Y + 4, WIDTH, "Password : ", BLU, LME);
+    password = input_string();
 
     // Check the inputs with the database
-    user_t* user = malloc(sizeof(user_t));
-    user_type_t user_type = database_user_login(username, password, user);
-    free(username); free(password);
+    User* user = malloc(sizeof(User));
+    UserType Userype = database_user_login(OFFSET_X, OFFSET_Y + 6, username, password, user);
 
     // The council will check your data :)
-    switch(user_type){
+    switch(Userype){
         case ADMIN:
-            printf(BLU ":: Login Successfull >w< -> Entering as Admin..." CURSOR_DOWN RESET);
-            sys_input_return();
-            screen_admin();
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 6, WIDTH, "Login Successfull >w< !!! Entering as Admin...", CYN_BG, CYN);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + 8, WIDTH, CYN);
+            input_continue(OFFSET_X, OFFSET_Y + 7, WIDTH);
+            ui_admin();
             break;
         case USER:
-            if (user->banned){
-                printf(RED "Unfortunately, the admin has banned you due to this reason :" CURSOR_DOWN RESET);
-                printf(    "-> %s" CURSOR_DOWN, user->message);
-                sys_input_return();
+            if (user->banned){ 
+                screen_draw_line_center(OFFSET_X, OFFSET_Y + 6, WIDTH, "Mr Admin has banned you due to this reason...", RED_BG, RED);
+                screen_draw_line(OFFSET_X, OFFSET_Y + 7, WIDTH, "", RED, RED);
+                screen_draw_raw(OFFSET_X + 2, OFFSET_Y + 7, RED, "-> %-55s", user->message);
+                screen_draw_line_decor(OFFSET_X, OFFSET_Y + 9, WIDTH, RED);
+                input_continue(OFFSET_X, OFFSET_Y + 8, WIDTH);
             } else {
-                printf(BLU ":: Login Successfull >w< -> Entering as User..." CURSOR_DOWN RESET);
-                sys_input_return();
-                screen_user(user);
+                screen_draw_line_center(OFFSET_X, OFFSET_Y + 6, WIDTH, "Login Successfull !!! Entering as User...", GRN_BG, LME);
+                screen_draw_line_decor(OFFSET_X, OFFSET_Y + 8, WIDTH, LME);
+                input_continue(OFFSET_X, OFFSET_Y + 7, WIDTH);
+                ui_user(user);
             }
             break;
-        case NONE:
-        default:
-            printf(RED ":: Login Failed >A<" CURSOR_DOWN RESET);
-            sys_input_return();
+        case NONE:  
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 7, WIDTH, "Login Failed > A <", RED_BG, RED);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + 9, WIDTH, RED);
+            input_continue(OFFSET_X, OFFSET_Y + 8, WIDTH);
             break;
-    }
-
+    } 
+    free(username); free(password); 
     free(user);
 }
 
-void screen_start_signup(){
+void ui_start_signup(){
     screen_clear();
 
     // Display UI
-    printf(BLU "::: Sign Up :::" CURSOR_DOWN RESET);
-    printf(    "Username :" CURSOR_DOWN);
-    printf(    "Password :" CURSOR_DOWN);
+    screen_draw_box_title(OFFSET_X, OFFSET_Y + 2, WIDTH, 4, "Sign Up", LME);
+    screen_draw_line(OFFSET_X, OFFSET_Y + 3, WIDTH, "Username : ", BLU, LME);
+    screen_draw_line(OFFSET_X, OFFSET_Y + 4, WIDTH, "Password : ", BLU, LME);
 
     // Input the username and password
     char *username, *password;
-    printf(CURSOR_UP CURSOR_UP);
-    printf(    "Username : ");
-    username = sys_input_str();
-    printf(    "Password : ");
-    password = sys_input_str();
+    screen_draw_line_input(OFFSET_X, OFFSET_Y + 3, WIDTH, "Username : ", BLU, LME);
+    username = input_string();
+    screen_draw_line_input(OFFSET_X, OFFSET_Y + 4, WIDTH, "Password : ", BLU, LME);
+    password = input_string();
 
     // Check the inputs with the database
-    user_t* database = malloc(sizeof(user_t));
-    status_t status = database_user_signup(username, password, database);
+    User* database = malloc(sizeof(User));
+    Status status = database_user_signup(OFFSET_X, OFFSET_Y + 6, username, password, database);
 
     // Hop on gambling
     switch(status){
+        case SUCCESS_N:
         case SUCCESS:
-            printf(BLU ":: Sign-up Successfull >w< -> Entering the First Setup..." CURSOR_DOWN RESET);
-            sys_input_return();
-            database_user_setup(username, password, database);
+            if (status == SUCCESS_N){
+                screen_draw_line_center(OFFSET_X, OFFSET_Y + 8, WIDTH, "Sign-up Successfull >w< ! Entering the First Setup!", BLU, BLU);
+                screen_draw_line_decor(OFFSET_X, OFFSET_Y + 10, WIDTH, BLU);
+                input_continue(OFFSET_X, OFFSET_Y + 9, WIDTH);
+            } else {
+                screen_draw_line_center(OFFSET_X, OFFSET_Y + 6, WIDTH, "Sign-up Successfull >w< ! Entering the First Setup!", BLU, BLU);
+                screen_draw_line_decor(OFFSET_X, OFFSET_Y + 8, WIDTH, BLU);
+                input_continue(OFFSET_X, OFFSET_Y + 7, WIDTH);
+            }
+            ui_start_signup_setup(username, password, database);
             break;
+        case FAILED_N:
         case FAILED:
-        default:
-            printf(RED ":: Sign-up Failed -> Failed to create an account T-T" CURSOR_DOWN RESET);
-            sys_input_return();
+        if (status == FAILED_N){
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 8, WIDTH, "Sign-up Failed ! Failed to create an account T-T", RED, RED);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + 10, WIDTH, RED);
+            input_continue(OFFSET_X, OFFSET_Y + 9, WIDTH);
+        } else {
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 7, WIDTH, "Sign-up Failed ! Failed to create an account T-T", RED, RED);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + 9, WIDTH, RED);
+            input_continue(OFFSET_X, OFFSET_Y + 8, WIDTH);
             break;
+        }
     }
     free(username); free(password);
     free(database);
 }
 
-void screen_leaderboard(){
-    FILE* database_file = fopen("database.dat", "rb");
+void ui_start_signup_setup(const char* username, const char* password, 
+                         User *const user){
+    int32_t user_balances;
 
+    while(RUNNING){
+        screen_clear();
+
+        screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, 6, "Setup", BLU);
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + 1, WIDTH, "You must be new here :shake_hand:", MAG, BLU);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 2, WIDTH, "Welcome to your \"first time\" main menu!", YEL, BLU);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 3, WIDTH, "To be able to play the game, you need to transfer", CYN, BLU);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 4, WIDTH, "some amount of money first to us :3", CYN, BLU);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 7, WIDTH, BLU);
+
+        screen_draw_line_input(OFFSET_X, OFFSET_Y + 6, WIDTH, "Enter the amount of money that you want : $", BLU, BLU);
+
+        bool check = input_number(OFFSET_X, OFFSET_Y + 6, &user_balances);
+        if (check == true) break;
+    }
+
+    if (user_balances <= 0){
+        screen_draw_line(OFFSET_X, OFFSET_Y + 6, WIDTH, " ", BLU, BLU);
+        screen_draw_raw(OFFSET_X + 2, OFFSET_Y + 6, RED, "Do you want to borrow "RED"$%-4i? " RST"(Y/n) : ", user_balances);
+        SET_OFFSET(OFFSET_X + 39, OFFSET_Y + 6);
+    } else {
+        screen_draw_line(OFFSET_X, OFFSET_Y + 6, WIDTH, " ", BLU, BLU);
+        screen_draw_line_input(OFFSET_X, OFFSET_Y + 6, WIDTH, "Are you sure? (Y/n) : ", MAG, BLU);
+    }
+    
+    bool confirm = input_confirmation();
+
+    if (confirm == false){
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + 6, WIDTH, "Transaction cancelled! T-T", RED_BG, RED);
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + 7, WIDTH, "Account creation failed!", RED, RED);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 9, WIDTH, RED);
+        input_continue(OFFSET_X, OFFSET_Y + 8, WIDTH);
+        return;
+    }
+
+    // Transfer Display
+    screen_draw_line_center(OFFSET_X, OFFSET_Y + 6, WIDTH, "Transfering...", GRN, GRN);
+    screen_draw_line_decor(OFFSET_X, OFFSET_Y + 8, WIDTH, GRN);
+    screen_loading_default(OFFSET_X, OFFSET_Y + 7, WIDTH);
+
+    // Thank you :D
+    screen_draw_line_center(OFFSET_X, OFFSET_Y + 6, WIDTH, " Thank you for registering \\(> v <)/", BLU_BG, BLU);
+    screen_draw_line_center(OFFSET_X, OFFSET_Y + 7, WIDTH + 10, "For your registration, you will get "GRN"10 free credits!"BLU"", BLU, BLU);
+    screen_draw_line_decor(OFFSET_X, OFFSET_Y + 9, WIDTH, BLU);
+    input_continue(OFFSET_X, OFFSET_Y + 8, WIDTH);
+
+    // Variable initializations
+     database_user_init(username, password, user, user_balances);
+}
+
+void ui_leaderboard(){
     screen_clear();
-    // Check whether the file exist or not
-    if (!sys_input_check_file(database_file)){
-        printf(RED "[!] No user has been registered >A<" RESET CURSOR_DOWN);
-        sys_input_return();
+    screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, 3, "Leaderboard", CYN);
+    screen_draw_line(OFFSET_X, OFFSET_Y + 1, WIDTH, MAG"Rank"CYN" | "BLU"Name"CYN"                      | "YEL"Gambled"CYN" | "GRN"Balances", MAG, CYN);
+    screen_draw_raw(OFFSET_X, OFFSET_Y + 2, CYN, "+------+---------------------------+---------+----------+");
+
+    FILE *database_file = fopen(FILENAME, "rb");
+    User *database_user;
+    uint8_t i = 1; // We skip the admin
+    uint8_t database_Userotal = database_leaderboard(1, 4, database_file, database_user);
+
+    if (database_Userotal == 0){
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + 3, WIDTH, "Database doesnt exist yet > A <", RED, RED);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 5, WIDTH, YEL);
+        input_continue(OFFSET_X, OFFSET_Y + 4, WIDTH);
+        return;
+    } else if (database_Userotal == 1){
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + 3, WIDTH, "No user has been registered yet > A <", RED, RED);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 5, WIDTH, YEL);
+        input_continue(OFFSET_X, OFFSET_Y + 4, WIDTH);
         return;
     }
-    // Count how many user is registered
-    fseek(database_file, 0, SEEK_END);
-    size_t database_size = ftell(database_file);
-    int database_user_total = database_size / sizeof(user_t);
-    if (database_user_total <= 1){
-        sys_input_return();
-        fclose(database_file);
-        return;
-    }
+
     // Convert into array
-    user_t* database = malloc(sizeof(user_t) * database_user_total);
+    database_user = malloc(sizeof(User) * database_Userotal);
     rewind(database_file);
-    fread(database, sizeof(user_t), database_user_total, database_file);
+    fread(database_user, sizeof(User), database_Userotal, database_file);
 
-    // Sorting part
-    database_sort(database_file, database, database_user_total);
-
-    // Display part
-    printf(BLU "           ::: Leaderboard :::           " CURSOR_DOWN RESET);
-    printf(MAG "Rank | Name          | Gambled | Balances" CURSOR_DOWN RESET);
-    printf(MAG "-----------------------------------------" CURSOR_DOWN RESET);
-    for (int i=1; i < database_user_total; i++) {;
-        printf( 
-            "%2i.  %s|%s %-10s%s    %s|%s   %-3li   %s| %s$%-i   " RESET CURSOR_DOWN, 
-            i, // skip admin
-            MAG, // bar
-            RESET,
-            database[i].username, 
-            (database[i].banned) ? RED"🔨"RESET : "",
-            MAG, // bar
-            YEL, database[i].game_data.counter[3],
-            MAG, // bar
-            (database[i].game_data.balances <= 0) ? RED : GRN, 
-            database[i].game_data.balances              
-        );
+    for (i = 1; i < database_Userotal; i++) {
+        screen_draw_line(OFFSET_X, OFFSET_Y + i + 2, WIDTH, " ", CYN, CYN);
+        screen_draw_raw(OFFSET_X + 3, OFFSET_Y + i + 2, MAG, "%-2d.", i);
+        screen_draw_raw(OFFSET_X + 7, OFFSET_Y + i + 2, CYN, "%s", "|");
+        screen_draw_raw(OFFSET_X + 9, OFFSET_Y + i + 2, (database_user[i].banned) ? RED_BG : BLU, "%-25s", database_user[i].username);
+        screen_draw_raw(OFFSET_X + 35, OFFSET_Y + i + 2, CYN, "%s", "|");
+        screen_draw_raw(OFFSET_X + 39, OFFSET_Y + i + 2, YEL, "%-3li", database_user[i].game_data.counter[3]);
+        screen_draw_raw(OFFSET_X + 45, OFFSET_Y + i + 2, CYN, "%s", "|");
+        if (database_user[i].game_data.balances <= 0)
+            screen_draw_raw(OFFSET_X + 48, OFFSET_Y + i + 2, RED, "$ %-4i", database_user[i].game_data.balances);
+        else
+            screen_draw_raw(OFFSET_X + 48, OFFSET_Y + i + 2, GRN, "$ %-4i", database_user[i].game_data.balances);
     }
-    sys_input_return();
+
+    screen_draw_raw(OFFSET_X,OFFSET_Y + i + 2, CYN, "+------+---------------------------+---------+----------+");
+    screen_draw_raw(OFFSET_X,OFFSET_Y + i + 4, YEL, "+-------------------------------------------------------+");
+    input_continue(OFFSET_X, OFFSET_Y + i + 3, WIDTH);
+
+    fclose(database_file);
+    free(database_user);
 }
 
 /* ====================== User Screen ======================= */
-void screen_user(user_t* user){
+void ui_user(User *const user){
     typedef enum {
         SLOT        = 1,
         COIN        = 2,
@@ -223,109 +334,126 @@ void screen_user(user_t* user){
         ACHIEVEMENT = 8,
         MARKET      = 9,
         EXIT        = 0,
-    } selection_user_t;
-    int input;
+    } MenuUser;
+    int32_t input;
 
     while(RUNNING){
         screen_clear();
-        printf( 
-            BLU "Do you love gambling, %s%s%s? I do and You are in the right place!" CURSOR_DOWN
-                "Which game do you want to play?        " CURSOR_DOWN
-                "[Balances : %s$%i%s] [Credits : %s%i%s]" CURSOR_DOWN          
-                "1 : Slot                       " CURSOR_DOWN
-                "2 : Coin                       " CURSOR_DOWN
-                "3 : Random Number Generator    " CURSOR_DOWN
-            YEL "7 : Leaderboard                " CURSOR_DOWN 
-            BLU "8 : Achievement                " CURSOR_DOWN
-            GRN "9 : Buy Credits                " CURSOR_DOWN
-            RED "0 : Exit                       " CURSOR_DOWN RESET
-                "Your input: ", 
-            MAG, user->username, RESET, 
-            (user->game_data.balances <= 0) ? RED : GRN,user->game_data.balances, RESET,
-            MAG, user->game_data.credits, RESET
-        );
-        if (!sys_input_int(&input)) continue;
+        screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, 10, "User Menu", GRN);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 1, WIDTH + 5, "Do you love gambling,           ? "BLU"I do and You are in", MAG, GRN);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 2, WIDTH, "the right place! Which game do you want to play?", BLU, GRN);
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + 3, WIDTH + 18, GRN_BG"[Balances :       ]"RST" "YEL_BG"[Credits :    ]"RST, WHT, GRN);
+
+        screen_draw_raw(OFFSET_X + 24, OFFSET_Y + 1, MAG_BG, "%-10s", user->username);
+        if (user->game_data.balances <= 0)
+            screen_draw_raw(OFFSET_X + 22, OFFSET_Y + 3, RED_BG, "$%-4i", user->game_data.balances);
+        else 
+            screen_draw_raw(OFFSET_X + 23, OFFSET_Y + 3, GRN_BG, "$%-4i", user->game_data.balances); 
+        screen_draw_raw(OFFSET_X + 42, OFFSET_Y + 3, YEL_BG, "%-3i", user->game_data.credits);
+
+        screen_draw_raw(OFFSET_X, OFFSET_Y + 4, GRN, "+--------------------------+----------------------------+");
+        screen_draw_line(OFFSET_X, OFFSET_Y + 5, WIDTH, "1. Slot          [7 7 7] "GRN"| "YEL"7. Leaderboard   [1st 2nd]", GRN, GRN);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 6, WIDTH, "2. Coin Toss       [0/1] "GRN"| "BLU"8. Achievement     [+ + +]", LME, GRN);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 7, WIDTH, "3. Rand Num Guesser  [?] "GRN"| "GRN"9. Buy Credits         [$]", YEL, GRN);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 8, WIDTH + 5, "0. Exit              [X] "GRN"| ", RED, GRN);
+        screen_draw_raw(OFFSET_X, OFFSET_Y + 9, GRN, "+--------------------------+----------------------------+");
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 11, WIDTH, YEL);
+        screen_draw_line_input(OFFSET_X, OFFSET_Y + 10, WIDTH, "Your input : ", YEL, YEL);
+
+        bool check = input_number(OFFSET_X, OFFSET_Y + 10, &input);
+        if (check == false) {
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 10, WIDTH, "Please input the number correctly >w<", RED_BG, RED);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + 12, WIDTH, RED);
+            input_continue(OFFSET_X, OFFSET_Y + 11, WIDTH); 
+            continue;
+        }
 
         switch(input){
             case SLOT: 
-                screen_user_slot(user);
+                ui_user_slot(user);
                 database_update(user);
                 break;
             case COIN: 
-                screen_user_coin(user);
+                ui_user_coin(user);
                 database_update(user);
                 break;
             case RNG:
-                screen_user_rng(user);
+                ui_user_rng(user);
                 database_update(user);
                 break;
             case LEADERBOARD: 
-                screen_leaderboard();
+                ui_leaderboard();
                 break;
             case ACHIEVEMENT: 
-                screen_user_achievement(user);
+                ui_user_achievement(user);
                 break;
             case MARKET:
-                screen_user_market(user);
+                ui_user_market(user);
                 database_update(user);
                 break;
             case EXIT: 
                 screen_clear();
-                printf(CURSOR_HIDE);
+
+                SET_CURSOR(CURSOR_HIDE);
                 if (user->game_data.balances < 0) {
-                    printf( 
-                        RED "You are in debt for $%i!" CURSOR_DOWN
-                            "Please pay it or else debt collector will haunt you > w <!!!" CURSOR_DOWN
-                        RESET, user->game_data.balances
-                    );
+                    screen_draw_box_title(OFFSET_X, OFFSET_Y + 2, WIDTH, 5, "Warning!", RED);
+                    screen_draw_line_center(OFFSET_X, OFFSET_Y + 3, WIDTH, "You are in debt for       ", RED, RED);
+                    screen_draw_raw(OFFSET_X + 35, OFFSET_Y + 3, RED_BG, "$%-4i", user->game_data.balances);
+                    screen_draw_line_center(OFFSET_X, OFFSET_Y + 4, WIDTH, "Please pay it or debt collector will haunt you >w<!!!", RED_BG, RED);
+                    screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH, "Exiting...    ", MAG_BG, MAG);
+                    screen_loading_mini(OFFSET_X + 32, OFFSET_Y + 5);
+                } else {
+                    screen_draw_box_title(OFFSET_X, OFFSET_Y + 2, WIDTH, 4, "Goodbye!", MAG);
+                    screen_draw_line_center(OFFSET_X, OFFSET_Y + 3, WIDTH, "Thank you for Playing!", MAG, MAG);
+                    screen_draw_line_center(OFFSET_X, OFFSET_Y + 4, WIDTH, "Exiting...    ", MAG_BG, MAG);
+                    screen_loading_mini(OFFSET_X + 32, OFFSET_Y + 4);
                 }
-                printf(CURSOR_SHOW);
-                printf(MAG "Thank you for Playing!" CURSOR_DOWN RESET);
-                printf(MAG "Exiting..." CURSOR_DOWN RESET);
-                sys_loading_mini();
+                SET_CURSOR(CURSOR_SHOW);
+
                 return;
             default:
-                printf(RED "Please input correctly >w<" CURSOR_DOWN RESET);
-                sys_input_return(); 
+                screen_draw_line_center(OFFSET_X, OFFSET_Y + 10, WIDTH, "Please input correctly >w<", RED_BG, RED);
+                screen_draw_line_decor(OFFSET_X, OFFSET_Y + 12, WIDTH, RED);
+                input_continue(OFFSET_X, OFFSET_Y + 11, WIDTH); 
                 break;
         }
     }   
 }
 
-void screen_user_slot(user_t* user){
+void ui_user_slot(User *const user){
     char *slot_icons[10] = {
-        MAG"🍇"RESET, GRN"🍉"RESET, MAG"🍆"RESET, CYN"🍪"RESET, RED"🐶"RESET, 
-        YEL"🐱"RESET, CYN"🐻"RESET, BLU"🐟️"RESET, RED"🍎"RESET, GRN"🐢"RESET
+        MAG"🍇"RST, GRN"🍉"RST, MAG"🍆"RST, CYN"🍪"RST, RED"🐶"RST, 
+        YEL"🐱"RST, CYN"🐻"RST, BLU"🐟️"RST, RED"🍎"RST, GRN"🐢"RST
     };
     char *slot_value_icons[3];
-    int slot_value[3];
+    uint8_t slot_value[3];
 
     screen_clear();
-    printf( 
-        BLU "          ::: Madoka Slot Machine!!! :::         " CURSOR_DOWN RESET
-            "Pretty much just your regular slot game          " CURSOR_DOWN
-            "Win condition : %sGet atleast 2 matching pictures" CURSOR_DOWN RESET
-            "Simple right?" CURSOR_DOWN,
-            MAG
-    );
-    sys_input_return();
+    screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, 5, "Madoka Slot Machine !!!", BLU);
+    screen_draw_line(OFFSET_X, OFFSET_Y + 1, WIDTH, "Pretty much just your regular slot game", BLU, BLU);
+    screen_draw_line(OFFSET_X, OFFSET_Y + 2, WIDTH, "Win condition : Get atleast two matching pictures", YEL, BLU);
+    screen_draw_line(OFFSET_X, OFFSET_Y + 3, WIDTH, "Simple right?", BLU, BLU);
+    screen_draw_line_decor(OFFSET_X, OFFSET_Y + 6, WIDTH, YEL);
+    input_continue(OFFSET_X, OFFSET_Y + 5, WIDTH);
     
     while(RUNNING){
         screen_clear();
-        printf(BLU "          ::: Madoka Slot Machine!!! :::         " CURSOR_DOWN RESET);
-        printf(    "                Credit(s) left = %s%i           " CURSOR_DOWN RESET, 
-            MAG, user->game_data.credits
-        );
+        screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, 7, "Madoka Slot Machine !!!", BLU);
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + 1, WIDTH, "Credit(s) left = ", YEL, BLU);
+        screen_draw_raw(OFFSET_X + 37, OFFSET_Y + 1, YEL, "%i", user->game_data.credits);
+        
         if (user->game_data.credits == 0){
-            printf("Too bad... but try %sKEEP GAMBLING%s again!" CURSOR_DOWN, MAG, RESET);
-            sys_input_return();
+            screen_draw_raw(OFFSET_X + 23, OFFSET_Y + 3, CYN, "[-]  [-]  [-]");
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH + 10, "Too bad, but try"MAG_BG" KEEP GAMBLING "RED_BG"again!", RED_BG, RED);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + 8, WIDTH, YEL);
+            input_continue(OFFSET_X, OFFSET_Y + 7, WIDTH);
             break;
         } else {
             user->game_data.credits--;
             user->game_data.counter[0]++;
         }
         // Rollcake
-        for (int i=0; i<3; i++){
+        for (uint8_t i = 0; i < 3; i++){
             if (cheat[0] == true){
                 slot_value[i] = 7;
             } else
@@ -333,96 +461,84 @@ void screen_user_slot(user_t* user){
             slot_value_icons[i] = slot_icons[slot_value[i]];             
         }
         // Display
-        printf( 
-            BLU "              +==================+              " CURSOR_DOWN RESET
-            BLU "              |%s [%s]  [%s]  [%s] %s|--%sO     " CURSOR_DOWN RESET
-            BLU "              +==================+              " CURSOR_DOWN RESET,
-            RESET,
-            slot_value_icons[0], slot_value_icons[1], slot_value_icons[2],
-            BLU, RED
-        );
+        screen_draw_raw(OFFSET_X + 21, OFFSET_Y + 3, CYN, "[%s]  [%s]  [%s]", 
+            slot_value_icons[0], slot_value_icons[1], slot_value_icons[2] );
+
         // If you get le fishe [🐟️] [🐟️] [🐟️]
         if (slot_value[0] == 7 && 
             slot_value[1] == 7 && 
             slot_value[2] == 7) {
-            printf( 
-                "            %s🐟️ 🐟️ 🐟️%s Jackpot! %s🐟 🐟 🐟️" CURSOR_DOWN RESET,
-                BLU, GRN, BLU
-            );
-            printf( 
-                "The fish council just give you %s$500!!!" CURSOR_DOWN RESET,
-                GRN
-            );
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 4, WIDTH, BLU"🐟️ 🐟️ 🐟️"GRN_BG" Jackpot! "BLU"🐟️ 🐟️ 🐟️", GRN_BG, GRN);
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH, "The fish council just gives you $500", GRN_BG, GRN);
             user->game_data.balances += 500;
         }
         // If you get all the same pictures
         else if (slot_value[0] == slot_value[1] && 
                  slot_value[0] == slot_value[2] && 
                  slot_value[1] == slot_value[2]) {
-            printf( 
-                "Congrats, you just win %s$50!" CURSOR_DOWN RESET,
-                GRN
-            );
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH, "Congrats, you just win $50!", GRN_BG, GRN);
             user->game_data.balances += 50;
         }
         // If you get atleast 2 pictures matching
         else if (slot_value[0] == slot_value[1] || 
                  slot_value[0] == slot_value[2] || 
                  slot_value[1] == slot_value[2]) {
-            printf( 
-                "Congrats, you just win %s$20!" CURSOR_DOWN RESET,
-                GRN
-            );
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH, "Congrats, you just win $20!", GRN_BG, GRN);
             user->game_data.balances += 20;
         }
-        else{
-            printf(
-                RED "Try again!" CURSOR_DOWN RESET
-            );
-        }
 
-        printf(YEL "Continue playing!? (Y/n) " RESET);
-        if (!sys_input_confirm()) break;
+        else screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH, "Try again!", RED_BG, RED);
+        
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 8, WIDTH, YEL);
+        screen_draw_line_input(OFFSET_X, OFFSET_Y + 7, WIDTH, "Continue playing!? (Y/n) ", YEL, YEL);
+
+        bool confirm = input_confirmation();
+        if (confirm == false) {
+            user->game_data.credits++;
+            user->game_data.counter[0]--;
+            break;
+        }
     }
 }
 
-void screen_user_coin(user_t* user){
-    int coin_throw, coin_guess;
-    char *coin_icons[] = {YEL"😼"RESET, RED"🐶"RESET};
+void ui_user_coin(User *const user){
+    uint8_t coin_throw; 
+    int32_t coin_guess;
+    char *coin_icons[] = {YEL"😼"RST, RED"🐶"RST};
 
     screen_clear();
-    printf( 
-        BLU "               ::: Coin Toss!!! :::        " CURSOR_DOWN RESET
-            "The classic coin toss                      " CURSOR_DOWN
-            "Win Condition : %sJust guess Head or tails " CURSOR_DOWN RESET
-            "If you guess correct, you will get %s$20   " CURSOR_DOWN RESET,
-            MAG, GRN
-    );
-    sys_input_return();
+    screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, 5, "Coin Tosser !!!", BLU);
+    screen_draw_line(OFFSET_X, OFFSET_Y + 1, WIDTH, "The classic coin toss", BLU, BLU);
+    screen_draw_line(OFFSET_X, OFFSET_Y + 2, WIDTH, "Win condition : Just guess Head or tails", YEL, BLU);
+    screen_draw_line(OFFSET_X, OFFSET_Y + 3, WIDTH, "Simple right?", BLU, BLU);
+    screen_draw_line_decor(OFFSET_X, OFFSET_Y + 6, WIDTH, YEL);
+    input_continue(OFFSET_X, OFFSET_Y + 5, WIDTH);
 
     while(RUNNING){
         screen_clear();
-        printf(BLU  "               ::: Coin Toss!!! :::        " CURSOR_DOWN RESET);
-        printf(     "               Credit(s) left = %s%i     " CURSOR_DOWN RESET, 
-            MAG, user->game_data.credits
-        );        
+        screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, 7, "Coin Tosser !!!", BLU);
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + 1, WIDTH, "Credit(s) left = ", YEL, BLU);
+        screen_draw_raw(OFFSET_X + 37, OFFSET_Y + 1, YEL, "%i", user->game_data.credits);
+        
         if (user->game_data.credits == 0){
-            printf("Too bad... but try %sKEEP GAMBLING%s again!" CURSOR_DOWN, MAG, RESET);
-            sys_input_return();
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 3, WIDTH, "[-]", CYN, CYN);
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH + 10, "Too bad, but try"MAG_BG" KEEP GAMBLING "RED_BG"again!", RED_BG, RED);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + 8, WIDTH, YEL);
+            input_continue(OFFSET_X, OFFSET_Y + 7, WIDTH);
             break;
         } else {
             user->game_data.credits--;
-            user->game_data.counter[1]++;
+            user->game_data.counter[0]++;
         }
 
-        printf(     
-                "                       [#]                    " CURSOR_DOWN
-            CYN "               Input your guess!              " CURSOR_DOWN RESET
-                "            [%sHead 😼 (0)%s|%sTail 🐶 (1)%s] : ",
-                YEL, RESET, RED, RESET
-        );
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + 3, WIDTH, "[#]", CYN, CYN);
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH, "Input your guess!", CYN, CYN);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 8, WIDTH, CYN);
+        screen_draw_line_input(OFFSET_X, OFFSET_Y + 7, WIDTH + 4, "[Head 😼 (0) | Tail 🐶 (1)] : ", YEL, CYN);
 
-        if (!sys_input_int(&coin_guess)) {
+        bool check = input_number(OFFSET_X, OFFSET_Y + 7, &coin_guess);
+
+        if (check == false) {
             user->game_data.credits++;
             user->game_data.counter[1]--;
             continue;
@@ -430,9 +546,12 @@ void screen_user_coin(user_t* user){
             user->game_data.credits++;
             user->game_data.counter[1]--;
 
-            printf(RED "Please input correctly >w< !" CURSOR_DOWN RESET);
-            printf(YEL "Continue playing!? (Y/n) " RESET);
-            if (!sys_input_confirm()) break;
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH, "Please input correctly >w< !", RED_BG, RED);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + 8, WIDTH, YEL);
+            screen_draw_line_input(OFFSET_X, OFFSET_Y + 7, WIDTH, "Continue playing!? (Y/n) ", YEL, YEL);
+
+            bool confirm = input_confirmation();
+            if (confirm == false) break;
             else continue;
         }
 
@@ -443,72 +562,78 @@ void screen_user_coin(user_t* user){
             coin_throw = rand() % 2;
 
         char *coin_throw_icons  = coin_icons[coin_throw];
-        printf(CURSOR_UP CURSOR_UP CURSOR_UP);
-        printf(     
-            "                       [%s]                    " CURSOR_DOWN
-        CYN "               Input your guess!              " CURSOR_DOWN RESET
-            "            [%sHead 😼 (0)%s|%sTail 🐶 (1)%s] : %i " CURSOR_DOWN,
-            coin_throw_icons, 
-            YEL, RESET, RED, RESET,
-            coin_guess
-        );
+
+        screen_draw_raw(OFFSET_X + 26, OFFSET_Y + 3, YEL, "[%s"YEL"]", coin_throw_icons);
 
         if (coin_guess == coin_throw){
-            printf("You just get "GRN"$20!\n"RESET);
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH, "You just win $20 !!!", GRN_BG, GRN);
             user->game_data.balances += 20;
         } else {
-            printf("Too bad... but try %sKEEP GAMBLING%s again!" CURSOR_DOWN, MAG, RESET);
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH + 10, "Too bad, but try"MAG_BG" KEEP GAMBLING "RED_BG"again!", RED_BG, RED);
         }
-        printf(YEL "Continue playing!? (Y/n) " RESET);
-        if (!sys_input_confirm()) break;
+
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 8, WIDTH, YEL);
+        screen_draw_line_input(OFFSET_X, OFFSET_Y + 7, WIDTH, "Continue playing!? (Y/n) ", YEL, YEL);
+
+        bool confirm = input_confirmation();
+        if (confirm == false) {
+            user->game_data.credits++;
+            user->game_data.counter[0]--;
+            break;
+        }
     }
 }
 
-void screen_user_rng(user_t* user){
-    int number_throw, number_guess;
+void ui_user_rng(User *const user){
+    int32_t number_throw;
+    int32_t number_guess;
 
     screen_clear();
-    printf( 
-        BLU "      ::: Random Number Guesser!!! :::              " CURSOR_DOWN RESET
-            "RNG God                                                    " CURSOR_DOWN RESET
-            "Win Condition : %sGuess a number between 0-99              " CURSOR_DOWN RESET
-            "If you guess correctly, you will get %s$500                " CURSOR_DOWN RESET
-            "If you guess 5 numbers above or bellow, you will get %s$50 " CURSOR_DOWN RESET,
-            MAG, GRN, GRN
-    );
-    sys_input_return();
+    screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, 5, "Random Number Guesser !!!", BLU);
+    screen_draw_line(OFFSET_X, OFFSET_Y + 1, WIDTH, "RNG God", BLU, BLU);
+    screen_draw_line(OFFSET_X, OFFSET_Y + 2, WIDTH, "Win condition : Guess a number between 0-99", YEL, BLU);
+    screen_draw_line(OFFSET_X, OFFSET_Y + 3, WIDTH, "Simple right?", BLU, BLU);
+    screen_draw_line_decor(OFFSET_X, OFFSET_Y + 6, WIDTH, YEL);
+    input_continue(OFFSET_X, OFFSET_Y + 5, WIDTH);
 
     while(RUNNING){
         screen_clear();
-        printf(BLU  "      ::: Random Number Guesser!!! :::    " CURSOR_DOWN RESET);
-        printf(     "           Credit(s) left = %s%i   " CURSOR_DOWN RESET, 
-            MAG, user->game_data.credits
-        );        
+        screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, 7, "Random Number Guesser !!!", BLU);
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + 1, WIDTH, "Credit(s) left = ", YEL, BLU);
+        screen_draw_raw(OFFSET_X + 37, OFFSET_Y + 1, YEL, "%i", user->game_data.credits);
+        
         if (user->game_data.credits == 0){
-            printf("Too bad... but try %sKEEP GAMBLING%s again!" CURSOR_DOWN, MAG, RESET);
-            sys_input_return();
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 3, WIDTH, "[-]", BLU, BLU);
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH + 10, "Too bad, but try"MAG_BG" KEEP GAMBLING "RED_BG"again!", RED_BG, RED);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + 8, WIDTH, YEL);
+            input_continue(OFFSET_X, OFFSET_Y + 7, WIDTH);
             break;
         } else {
             user->game_data.credits--;
-            user->game_data.counter[2]++;
+            user->game_data.counter[0]++;
         }
 
-        printf(     
-                "                    [#]           " CURSOR_DOWN
-            CYN "        Input your guess! (0-99) : " RESET
-        );
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + 3, WIDTH, "[##]", BLU, BLU);
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH, "Input your guess!", BLU, BLU);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 8, WIDTH, BLU);
+        screen_draw_line_input(OFFSET_X, OFFSET_Y + 7, WIDTH, "(0 - 99): ", YEL, BLU);
 
-        if (!sys_input_int(&number_guess)) {
+        bool check = input_number(OFFSET_X, OFFSET_Y + 7, &number_guess);
+
+        if (check == false) {
             user->game_data.credits++;
-            user->game_data.counter[2]--;
+            user->game_data.counter[1]--;
             continue;
-        } else if (number_guess < 0 || number_guess > 99){
+        } else if (number_guess < 0 && number_guess > 99){
             user->game_data.credits++;
-            user->game_data.counter[2]--;
+            user->game_data.counter[1]--;
 
-            printf(RED "Please input correctly >w< !" CURSOR_DOWN RESET);
-            printf(YEL "Continue playing!? (Y/n) " RESET);
-            if (!sys_input_confirm()) break;
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 4, WIDTH, "Please input correctly >w< !", RED_BG, RED);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + 8, WIDTH, YEL);
+            screen_draw_line_input(OFFSET_X, OFFSET_Y + 7, WIDTH, "Continue playing!? (Y/n) ", YEL, YEL);
+
+            bool confirm = input_confirmation();
+            if (confirm == false) break;
             else continue;
         }
 
@@ -518,335 +643,465 @@ void screen_user_rng(user_t* user){
         else
             number_throw = rand() % 100;
 
-        printf(CURSOR_UP CURSOR_UP);
-        printf(     
-                "                    [%2i]              " CURSOR_DOWN
-            CYN "        Input your guess! (0-99) : %i  " CURSOR_DOWN RESET,
-            number_throw, number_guess
-        );
+        screen_draw_raw(OFFSET_X + 26, OFFSET_Y + 3, YEL, "[%2i"YEL"]", number_throw);
 
         // If they are the same
         if (number_guess == number_throw){
-            printf("No way, you are right on the money! You just get %s$500!" CURSOR_DOWN RESET, GRN);
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH, "NO WAY !!! you just win $500 !!!", GRN_BG, GRN);
             user->game_data.balances += 500;
         }
         // If +- 5 differences
         else if (number_guess >= number_throw - 5 && 
                  number_guess <= number_throw + 5) {
-            printf("You are just %s%i%s number away!" CURSOR_DOWN, MAG, number_throw - number_guess, RESET);
-            printf("You just get %s$50!%s           " CURSOR_DOWN, GRN, RESET);
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 4, WIDTH, "You are just [  ] number away from your guess [  ]", MAG, BLU);
+            screen_draw_raw(OFFSET_X + 16, OFFSET_Y + 4, RED, "[%2i"RED"]", number_throw - number_guess);
+            screen_draw_raw(OFFSET_X + 49, OFFSET_Y + 4, BLU, "[%2i"BLU"]", number_guess);
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH, "You just win $50 !!!", GRN_BG, GRN);
             user->game_data.balances += 50;
         } 
         // If miss
         else {
-            printf("Too bad... but try %sKEEP GAMBLING%s again!" CURSOR_DOWN, MAG, RESET);
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH + 10, "Too bad, but try"MAG_BG" KEEP GAMBLING "RED_BG"again!", RED_BG, RED);
         }
-        
-        printf(YEL "Continue playing!? (Y/n) " RESET);
-        if (!sys_input_confirm()) break;
+
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 8, WIDTH, YEL);
+        screen_draw_line_input(OFFSET_X, OFFSET_Y + 7, WIDTH, "Continue playing!? (Y/n) ", YEL, YEL);
+
+        bool confirm = input_confirmation();
+        if (confirm == false) {
+            user->game_data.credits++;
+            user->game_data.counter[0]--;
+            break;
+        }
     }
 }
 
-void screen_user_market(user_t* user){
-    int credits_add, credits_cost, balances_difference, balances_change;
+void ui_user_market(User *const user){
+    int32_t credits_add, credits_cost, balances_difference, balances_change;
 
     screen_clear();
-    printf( 
-        BLU "           ::: Market!!! :::           " CURSOR_DOWN RESET
-        BLU "Uhmmm... hi > w < !!!                  " CURSOR_DOWN RESET
-            "Hh-how much do you want to pay T-T?    " CURSOR_DOWN RESET
-            "Credits %s(1 = $10) : " RESET,
-            GRN
-    );
-    if (!sys_input_int(&credits_add)) return;
+    screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, 5, "Market !!!", GRN);
+    screen_draw_line(OFFSET_X, OFFSET_Y + 1, WIDTH, "Uhmmm... hi > w < !!!", BLU, GRN);
+    screen_draw_line(OFFSET_X, OFFSET_Y + 2, WIDTH, "Hh-how much do you want to pay T-T?", BLU, GRN);
+    screen_draw_line_center(OFFSET_X, OFFSET_Y + 3, WIDTH, "> A <", MAG, GRN);
+    screen_draw_line_decor(OFFSET_X, OFFSET_Y + 6, WIDTH, GRN);
+    screen_draw_line_input(OFFSET_X, OFFSET_Y + 5, WIDTH, "Credits (1 = $10) : ", GRN, GRN);
+
+    bool check = input_number(OFFSET_X, OFFSET_Y + 5, &credits_add);
+
+    if (check == false) {
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH, "Please input correctly >w< !", RED_BG, RED);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 7, WIDTH, YEL);
+        input_continue(OFFSET_X, OFFSET_Y + 6, WIDTH);
+        return;
+    }
+
     credits_cost    = 10 * credits_add;
     balances_change = user->game_data.balances - credits_cost;
 
     if (credits_add < 0) {
-        printf(RED "Nuh uh... Too bad you can't do that (·ω·)\n"RESET);
-        sys_input_return();
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH + 3, "Nuh uh... Too bad you can't do that (·ω·)", RED_BG, RED);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 7, WIDTH, YEL);
+        input_continue(OFFSET_X, OFFSET_Y + 6, WIDTH);
         return;
     } else if (credits_add == 0) {
-        printf("Transaction cancelled! "BLU"> v < \n"RESET);
-        sys_input_return();
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH, "Transaction cancelled! > v <", RED_BG, RED);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 7, WIDTH, YEL);
+        input_continue(OFFSET_X, OFFSET_Y + 6, WIDTH);
         return;
     } else if (credits_add < 0) {
         if (user->game_data.balances >= 0) 
             balances_difference = credits_cost -  user->game_data.balances;
         else 
             balances_difference = credits_cost; // Debt
-        printf( 
-            MAG "Do you want to borrow %s$%i?%s (Y/n) : ", 
-            RED, RESET, balances_difference
-        );
+        screen_draw_raw(OFFSET_X + 2, OFFSET_Y + 5, RED, "Do you want to borrow $%i", balances_difference);
     } else 
-        printf(MAG "Are you sure? " RESET "(Y/n)");
-    if (!sys_input_confirm()) {
-        printf("Transaction cancelled! "BLU"> v < \n"RESET);
-        sys_input_return();
+        screen_draw_line_input(OFFSET_X, OFFSET_Y + 5, WIDTH, "Are you sure? (Y/n) ", MAG, RED);
+
+    bool confirm = input_confirmation();
+    
+    if (confirm == false) {
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH, "Transaction cancelled! > v <", RED_BG, RED);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 7, WIDTH, YEL);
+        input_continue(OFFSET_X, OFFSET_Y + 6, WIDTH);
         return;
     }
 
-    printf(MAG "Transfering..." CURSOR_DOWN RESET);
-    sys_loading_default();
+    screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH, "Transfering...", GRN, GRN);
+    screen_draw_line_decor(OFFSET_X, OFFSET_Y + 7, WIDTH, GRN);
+    screen_loading_default(OFFSET_X, OFFSET_Y + 6, WIDTH);
     user->game_data.credits += credits_add;
     user->game_data.balances-= 10 * credits_add;
 
-    printf(
-        GRN "Money transfered! %sCurrent balances : %s$%i   " CURSOR_DOWN RESET
-            "Erm... please gamble responsibly T-T...        " CURSOR_DOWN,
-            RESET, (user->game_data.balances <= 0) ? RED : GRN, user->game_data.balances
-    );
-    sys_input_return();
+    screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH, "Money transfered! Current balances : $", GRN, GRN);
+    screen_draw_raw(OFFSET_X + 47, OFFSET_Y + 5, (user->game_data.balances <= 0) ? RED : GRN, "%i", user->game_data.balances);
+    screen_draw_line_center(OFFSET_X, OFFSET_Y + 6, WIDTH, "Erm... please gamble responsibly T-T...", GRN_BG, GRN);
+    screen_draw_line_decor(OFFSET_X, OFFSET_Y + 8, WIDTH, GRN);
+    input_continue(OFFSET_X, OFFSET_Y + 7, WIDTH);
+
     return;
 }
 
-void screen_user_achievement(user_t* user){
-    bool track      = false;
-    int  counter[]  = {10, 50, 100};
-    char *colors[]  = {GRN, MAG, RED};
-    char *game[]    = {"Slot", "Coin Toss", "Random Number Guesser"};
+void ui_user_achievement(User *const user){
+    uint8_t i = 0;
+    bool    track      = false;
+    uint8_t counter[]  = {10, 50, 100};
+    char    *colors[]  = {GRN, MAG, RED};
+    char    *game[]    = {"Slot", "Coin Toss", "Random Number Guesser"};
 
     screen_clear();
-    printf(MAG "Your achievement :" CURSOR_DOWN RESET);
+    screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, 3, "Achievement", MAG);
 
-    for(int i=0; i < 3; i++){
-        for(int j=0; i < 3; i++){
+    for(i=0; i < 3; i++){
+        for(uint8_t j=0; i < 3; i++){
             if (user->game_data.counter[i] >= counter[j]) {
-                printf( "-> Play %s%s%s for %s%i times" CURSOR_DOWN RESET, 
-                        BLU, game[i], RESET, colors[j], counter[j]
+                screen_draw_line(OFFSET_X, OFFSET_Y + i + 1, WIDTH, "", MAG, MAG);
+                screen_draw_raw(OFFSET_X + 2, OFFSET_Y + i + 1, BLU, 
+                    "Play %s%s%s for %s%i times",
+                    BLU, game[i], RST, colors[j], counter[j]
                 );
                 track = true;
             }
         }
     }
+
     if (user->game_data.balances <= -100 || user->game_data.persist[0] == true) {
-        printf(
-            "-> %sDebt Collector's Ghost%s : In %sdebt%s for more than %s$100" CURSOR_DOWN RESET,
-            MAG, RESET, RED, RESET, RED
+        screen_draw_line(OFFSET_X, OFFSET_Y + i - 1, WIDTH, "", MAG, MAG);
+        screen_draw_raw(OFFSET_X + 2, OFFSET_Y + i - 1, BLU,
+            "%sDebt Collector's Ghost%s : In %sdebt%s for more than %s$100",
+            MAG, RST, RED, RST, RED
         );
         user->game_data.persist[0] = true;
         track = true;
+        i++;
     }
     if (user->game_data.balances >= 1000 && user->game_data.counter[3] >= 100 || user->game_data.persist[1] == true) {
-        printf(
-            "-> %sMasterful Gambit%s : Earned %s$1000" CURSOR_DOWN RESET,
-            MAG, RESET, GRN
+        screen_draw_line(OFFSET_X, OFFSET_Y + i - 1, WIDTH, "", MAG, MAG);
+        screen_draw_raw(OFFSET_X + 2, OFFSET_Y + i - 1, BLU,
+            "%sMasterful Gambit%s : Earn %s$1000",
+            MAG, RST, GRN
         );
         user->game_data.persist[1] = true;
         track = true;
+        i++;
     }
     if (user->game_data.counter[3] >= 100 || user->game_data.persist[2] == true) {
-        printf(
-            "-> %sA True Gambler Mindset%s : Gambled for more than %s100 times" CURSOR_DOWN RESET,
-            MAG, RESET, GRN
+        screen_draw_line(OFFSET_X, OFFSET_Y + i - 1, WIDTH, "", MAG, MAG);
+        screen_draw_raw(OFFSET_X + 2, OFFSET_Y + i - 1, BLU,      
+            "%sA True Gambler Mindset%s : Play for more than %s100 times",
+            MAG, RST, GRN
         );
         user->game_data.persist[2] = true;
         track = true;
+        i++;
     }
 
-    if (!track) printf(RED "There's no achievement yet ('A`)" CURSOR_DOWN RESET);
-    sys_input_return();
+    if (track == None) screen_draw_line_center(OFFSET_X, OFFSET_Y + 1, WIDTH, "There's no achievement yet ('A`)", RED_BG, RED);
+
+    screen_draw_line_decor(OFFSET_X, OFFSET_Y + i - 1, WIDTH, YEL);
+    screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 1, WIDTH, YEL);
+    input_continue(OFFSET_X, OFFSET_Y + i, WIDTH);
 }
 
-/* ===================== Admin Screen ======================= */
-void screen_admin(){
+// /* ===================== Admin Screen ======================= */
+void ui_admin(){
     typedef enum {
         VIEW    = 1,
         BAN     = 2,
         UNBAN   = 3,
         REMOVE  = 4,
+        EXPORT  = 5,
         CHEAT   = 8,
         ASCII   = 9,
         EXIT    = 0
-    } selection_admin_t;
-    int input;
+    } MenuAdmin;
+    int32_t input;
 
     while(RUNNING){
         screen_clear();
-        printf( 
-            MAG "Hello Mr. Admin!                   " CURSOR_DOWN
-                "What do you want to select? >///<  " CURSOR_DOWN RESET
-                "1. View Registered user            " CURSOR_DOWN
-                "2. Ban User                        " CURSOR_DOWN
-                "3. Unban User                      " CURSOR_DOWN
-                "4. Remove User                     " CURSOR_DOWN
-            GRN "8. Cheat                           " CURSOR_DOWN
-            BLU "9. ASCII art                       " CURSOR_DOWN
-            RED "0. Exit                            " CURSOR_DOWN RESET
-                "Your input : "
-        );
-        if (!sys_input_int(&input)) continue;
+        screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, HEIGHT - 1, "Admin Menu", CYN);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 1, WIDTH, "Hello Mr. Admin!", MAG, CYN);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 2, WIDTH, "What do you want to select? >///<", WHT, CYN);
+        screen_draw_raw(OFFSET_X, OFFSET_Y + 3, CYN, "+-------------------------+-----------------------------+");
+        screen_draw_line(OFFSET_X, OFFSET_Y + 4, WIDTH, YEL"1. View registered user "CYN"| "RED"4. Remove user             ", GRN, CYN);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 5, WIDTH, PNK"2. Ban user             "CYN"| "CYN"5. Export into text (.yaml)", LME, CYN);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 6, WIDTH, BLU"3. Unban user           "CYN"| "GRN"8. Cheat                   ", YEL, CYN);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 7, WIDTH, RED"0. Exit                 "CYN"| "MAG"9. ASCII art               ", RED, CYN);
+        screen_draw_raw(OFFSET_X, OFFSET_Y + 8, CYN, "+-------------------------+-----------------------------+");
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 10, WIDTH, YEL);
+        screen_draw_line_input(OFFSET_X, OFFSET_Y + 9, WIDTH, "Your input : ", YEL, YEL);
+
+        bool check = input_number(OFFSET_X, OFFSET_Y + 9, &input);
+
+        if (check == false) {
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 9, WIDTH, "Please input the number correctly >w<", RED_BG, RED);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + 11, WIDTH, RED);
+            input_continue(OFFSET_X, OFFSET_Y + 10, WIDTH); 
+            continue;
+        }
+
         switch(input){
             case VIEW :
-                screen_admin_view();
-                sys_input_return();
+                ui_admin_view(false);
                 break;
             case BAN :
-                screen_admin_ban();
+                ui_admin_ban();
                 break;
             case UNBAN :
-                screen_admin_unban();
+                ui_admin_unban();
                 break;
             case REMOVE :
-                screen_admin_delete();
+                ui_admin_delete();
+                break;
+            case EXPORT :
+                ui_admin_export();
                 break;
             case CHEAT :
-                screen_cheat();
+                ui_cheat();
                 break;
             case ASCII :
-                screen_fun_ascii();
-                sys_input_return();
+                ui_fun_ascii();
                 break;
             case EXIT :
                 screen_clear();
-                printf(MAG "Exiting..." CURSOR_DOWN RESET);
-                sys_loading_mini();
+                screen_draw_box_title(OFFSET_X, OFFSET_Y + 2, WIDTH, 4, "Goodbye!", MAG);
+                screen_draw_line_center(OFFSET_X, OFFSET_Y + 3, WIDTH, "Thank you for administrating us!", MAG, MAG);
+                screen_draw_line_center(OFFSET_X, OFFSET_Y + 4, WIDTH, "Exiting...    ", MAG_BG, MAG);
+                screen_loading_mini(OFFSET_X + 32, OFFSET_Y + 4);
                 return;
             default :
-                printf(RED "Please input correctly >w< !" CURSOR_DOWN RESET);
-                sys_input_return();
+                screen_draw_line_center(OFFSET_X, OFFSET_Y + 9, WIDTH, "Please input the number correctly >w<", RED_BG, RED);
+                screen_draw_line_decor(OFFSET_X, OFFSET_Y + 11, WIDTH, RED);
+                input_continue(OFFSET_X, OFFSET_Y + 10, WIDTH); 
                 break;
         }
     }
 }
 
-void screen_admin_view(){
+uint8_t ui_admin_view(const bool called){
     FILE* database_file = fopen("database.dat", "rb");
-    user_t* database_user = malloc(sizeof(user_t));
-    int i=1;
+    User* database_user = malloc(sizeof(User));
+    uint8_t i = 1;
+
+    if (called == false){
+        screen_clear();
+        screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, 3, "List of users", CYN);
+    }
 
     // Check whether the file exist or not
-    if (!sys_input_check_file(database_file)){
-        return;
+    bool exist = input_filechecker(OFFSET_X, OFFSET_Y + 1, database_file);
+
+    if (exist == None && called == false){
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 4, WIDTH, YEL);
+        input_continue(OFFSET_X ,OFFSET_Y + 3, WIDTH);
+        return 0;
     }
 
-    screen_clear();
-    printf(MAG "List of registered user :" CURSOR_DOWN RESET);
-    while(fread(database_user, sizeof(user_t), 1, database_file) == 1){
-        printf(
-            "%2i. Username : %s %s   " CURSOR_DOWN RESET
-            "    Password : %s      " CURSOR_DOWN RESET
-            "    Balances : %s%i    " CURSOR_DOWN RESET
-            "    Credits  : %i      " CURSOR_DOWN RESET,
-            i, database_user->username, (database_user->banned) ? RED"(banned)"RESET : "",
-            database_user->password,
-            (database_user->game_data.balances <= 0) ? RED : GRN, database_user->game_data.balances,
-            database_user->game_data.credits
-        );
-        printf(CURSOR_DOWN);
+    screen_draw_line(OFFSET_X, OFFSET_Y + 1, WIDTH, MAG" No "CYN" | "BLU"Name"CYN"                      | "YEL"Gambled"CYN" | "GRN"Balances", MAG, CYN);
+    while(fread(database_user, sizeof(User), 1, database_file) == 1){
+        screen_draw_line(OFFSET_X, OFFSET_Y + i + 2, WIDTH, "", CYN, CYN);
+        screen_draw_raw(OFFSET_X + 3, OFFSET_Y + i + 2, MAG, "%-2d.", i);
+        screen_draw_raw(OFFSET_X + 7, OFFSET_Y + i + 2, CYN, "%s", "|");
+        screen_draw_raw(OFFSET_X + 9, OFFSET_Y + i + 2, (database_user->banned) ? RED_BG : BLU, "%-25s", database_user->username);
+        screen_draw_raw(OFFSET_X + 35, OFFSET_Y + i + 2, CYN, "%s", "|");
+        screen_draw_raw(OFFSET_X + 39, OFFSET_Y + i + 2, YEL, "%-3li", database_user->game_data.counter[3]);
+        screen_draw_raw(OFFSET_X + 45, OFFSET_Y + i + 2, CYN, "%s", "|");
+        if (database_user[i].game_data.balances <= 0)
+            screen_draw_raw(OFFSET_X + 48, OFFSET_Y + i + 2, RED, "$ %-4i", database_user->game_data.balances);
+        else
+            screen_draw_raw(OFFSET_X + 48, OFFSET_Y + i + 2, GRN, "$ %-4i", database_user->game_data.balances);
+
+        usleep(MILISECONDS * 70);
+        fflush(stdout);
         i++;
     }
+
     free(database_user);
     fclose(database_file);
+
+    if (called == false) {
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 2, WIDTH, YEL);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 4, WIDTH, YEL);
+        input_continue(OFFSET_X ,OFFSET_Y + i + 3, WIDTH);
+    }
+
+    return i;
 }
 
-void screen_admin_ban(){
+void ui_admin_ban(){
     char *username;
     char *message;
 
-    screen_admin_view();
-    printf("Which user do you want to be %sbanned?%s ", RED, RESET);
-    username = sys_input_str();
+    screen_clear();
+    screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, 3, "Banhammer", RED);
+    uint8_t i = ui_admin_view(true);
+    screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 2, WIDTH, RED);
+    screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 4, WIDTH, RED);
+    screen_draw_line_input(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "Which user do you want to be banned? ", RED, RED);
+    
+    username = input_string();
 
     FILE* database_file = fopen("database.dat", "rb+");
-    user_t* database = malloc(sizeof(user_t));
+    User* database = malloc(sizeof(User));
     bool found = false;
-    while(fread(database, sizeof(user_t), 1, database_file) == 1){
+
+    while(fread(database, sizeof(User), 1, database_file) == 1){
         if (strcmp(username, "Admin") == 0){
             found = true;
-            printf(RED "[!] Nuh uh, you can't ban this user!" CURSOR_DOWN RESET);
+
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "Nuh uh! you can't ban yourself !!!", RED_BG, RED);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 5, WIDTH, YEL);
+            input_continue(OFFSET_X ,OFFSET_Y + i + 4, WIDTH);
             break;
         } else if (strcmp(username, database->username) == 0){
             found = true;
-            printf("Reason for the ban? ");
-            message = sys_input_str();
+
+            screen_draw_line_input(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "Reason ?  ", RED, RED);
+            message = input_string();
+
             database->banned = true;
             strcpy(database->message, message);
-            printf(GRN "Successfully banning %s\"%s\"" CURSOR_DOWN, RESET, username);
 
-            fseek(database_file, -sizeof(user_t), SEEK_CUR);
-            fwrite(database, sizeof(user_t), 1, database_file); 
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "Banning...", RED_BG, RED);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 5, WIDTH, RED);
+            screen_loading_nuke(OFFSET_X, OFFSET_Y + i + 4, WIDTH);
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "Successfully banned ", RED_BG, RED);
+            screen_draw_raw(OFFSET_X + 38, OFFSET_Y + i + 3, MAG_BG, "%s", username);
+            input_continue(OFFSET_X, OFFSET_Y + i + 4, WIDTH);
+
+            fseek(database_file, -sizeof(User), SEEK_CUR);
+            fwrite(database, sizeof(User), 1, database_file); 
             free(message);
             break;
         }
     }
-    if (!found){
-        printf(RED"[!] User not found!" CURSOR_DOWN RESET);
+    if (found == false){
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "User not found!", RED_BG, RED);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 5, WIDTH, YEL);
+        input_continue(OFFSET_X ,OFFSET_Y + i + 4, WIDTH);
     }
-    sys_input_return();
+
     free(database);
     free(username);
     fclose(database_file);
 }
 
-void screen_admin_unban(){
+void ui_admin_unban(){
     char *username;
+    char *emoji = "😇";
 
-    screen_admin_view();
-    printf("Which user do you want to be %sunbanned?%s ", BLU, RESET);
-    username = sys_input_str();
+    screen_clear();
+    screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, 3, "  Repentance  ", BLU);
+    screen_draw_raw(OFFSET_X + 20, OFFSET_Y, BLU, "%s", emoji);
+    screen_draw_raw(OFFSET_X + 33, OFFSET_Y, BLU, "%s", emoji);
+    uint8_t i = ui_admin_view(true);
+    screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 2, WIDTH, BLU);
+    screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 4, WIDTH, BLU);
+    screen_draw_line_input(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "Which user do you want to be unbanned? ", BLU, BLU);
+
+    username = input_string();
 
     FILE* database_file = fopen("database.dat", "rb+");
-    user_t* database = malloc(sizeof(user_t));
+    User* database = malloc(sizeof(User));
     bool found = false;
-    while(fread(database, sizeof(user_t), 1, database_file) == 1){
+
+    while(fread(database, sizeof(User), 1, database_file) == 1){
         if (strcmp(username, "Admin") == 0){
             found = true;
-            printf(RED "[!] Nuh uh, you can't do thing with this user!" CURSOR_DOWN RESET);
+
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "You already have the immunity !!!", RED_BG, RED);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 5, WIDTH, YEL);
+            input_continue(OFFSET_X ,OFFSET_Y + i + 4, WIDTH);
             break;
         } else if (strcmp(username, database->username) == 0){
             found = true;
-            database->banned = false;
-            printf(GRN "Successfully unbanning %s\"%s\"" CURSOR_DOWN, RESET, username);
+            database->banned = false;            
             
-            fseek(database_file, -sizeof(user_t), SEEK_CUR);
-            fwrite(database, sizeof(user_t), 1, database_file); 
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "Successfully unbanned ", BLU_BG, BLU);
+            screen_draw_raw(OFFSET_X + 40, OFFSET_Y + i + 3, MAG_BG, "%s", username);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 5, WIDTH, YEL);
+            input_continue(OFFSET_X ,OFFSET_Y + i + 4, WIDTH);
+            
+            fseek(database_file, -sizeof(User), SEEK_CUR);
+            fwrite(database, sizeof(User), 1, database_file); 
             break;
         }
     }
     if (!found){
-        printf(RED"[!] User not found!" CURSOR_DOWN RESET);
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "User not found!", RED_BG, RED);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 5, WIDTH, YEL);
+        input_continue(OFFSET_X ,OFFSET_Y + i + 4, WIDTH);
     }
-    sys_input_return();
+
     free(database);
     free(username);
     fclose(database_file);
 }
 
-void screen_admin_delete(){
+void ui_admin_delete(){
     char *username;
 
-    screen_admin_view();
-    printf("Which user do you want to be %snuked?%s ", RED, RESET);
-    username = sys_input_str();
+    screen_clear();
+    screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, 3, "Nuclear Missile Launch", RED);
+    uint8_t i = ui_admin_view(true);
+    screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 2, WIDTH, RED);
+    screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 4, WIDTH, RED);
+    screen_draw_line_input(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "Which one do you want to nuke? ", RED, RED);
+
+    username = input_string();
 
     FILE* database_file = fopen("database.dat", "rb+");
     FILE* database_new = fopen("database.dat.temp", "wb");
-    user_t* database = malloc(sizeof(user_t));
+    User* database = malloc(sizeof(User));
     bool found = false;
-    while(fread(database, sizeof(user_t), 1, database_file) == 1){
+
+    while(fread(database, sizeof(User), 1, database_file) == 1){
         if (strcmp(username, "Admin") == 0){
-            printf(RED "[!] Nuh uh, you can't delete this user!" CURSOR_DOWN RESET);
-            sys_input_return();
+            found = true;
+
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "Nuh uh! you can't delete yourself !!!", RED_BG, RED);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 5, WIDTH, YEL);
+            input_continue(OFFSET_X ,OFFSET_Y + i + 4, WIDTH);
+
             free(database);
             free(username);
             fclose(database_new);
             fclose(database_file);
             remove("database.dat.temp");
             return;
+
         } else if (strcmp(username, database->username) == 0){
             found = true;
             continue;
         }
-        fwrite(database, sizeof(user_t), 1, database_new);
+        fwrite(database, sizeof(User), 1, database_new);
     }
-    if (found){
-        sys_loading_nuke();
-        printf(GRN "Successfully nuked %s\"%s\"" CURSOR_DOWN, RESET, username);
-    } else
-        printf(RED"[!] User not found!" CURSOR_DOWN RESET);
-    sys_input_return();
+    if (found == false){   
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "User not found!", RED_BG, RED);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 5, WIDTH, YEL);
+        input_continue(OFFSET_X ,OFFSET_Y + i + 4, WIDTH);
+    } else {
+        screen_draw_line_input(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "Are you really sure? (Y/n) ", RED, RED);
+        bool confirm = input_confirmation();
+        if (confirm == false){
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "Cancelling the action!", RED_BG, RED);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 5, WIDTH, RED);
+            input_continue(OFFSET_X, OFFSET_Y + i + 4, WIDTH);
+
+            free(database);
+            free(username);
+            fclose(database_new);
+            fclose(database_file);
+            remove("database.dat.temp");
+            return;
+        }
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "Deleting...", RED_BG, RED);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 5, WIDTH, RED);
+        screen_loading_nuke(OFFSET_X, OFFSET_Y + i + 4, WIDTH);
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "Successfully nuked ", RED_BG, RED);
+        screen_draw_raw(OFFSET_X + 38, OFFSET_Y + i + 3, MAG_BG, "%s", username);
+        input_continue(OFFSET_X, OFFSET_Y + i + 4, WIDTH);
+    }
     free(database);
     free(username);
     fclose(database_new);
@@ -855,146 +1110,210 @@ void screen_admin_delete(){
     rename("database.dat.temp","database.dat");
 }
 
-void screen_fun_ascii(){
+void ui_admin_export(){
+    screen_clear();
+
+    screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, 3, "Exporting", LME);
+    screen_draw_line_center(OFFSET_X, OFFSET_Y + 1, WIDTH, "Please wait a minute...", LME_BG, LME);
+    screen_loading_mini(OFFSET_X + 41, OFFSET_Y + 1);
+
+    screen_draw_line_center(OFFSET_X, OFFSET_Y + 1, WIDTH, "Successfully Exported!", LME_BG, LME);
+    screen_draw_line_decor(OFFSET_X,OFFSET_Y + 3, WIDTH, CYN);
+    input_continue(OFFSET_X, OFFSET_Y + 2, WIDTH);
+
+    database_textify();
+
+    return;
+}
+
+void ui_fun_ascii(){
     FILE *file = fopen("ascii.txt", "r");
+    uint16_t i = 0, j = 0;
     char *status; // Check whether the line reach EOF
     char line[255];
     
     screen_clear();
 
     if(!file){
-        printf(RED "No ascii.txt file was found" CURSOR_DOWN RESET);
-        sys_input_return();
+        screen_draw_line(OFFSET_X, OFFSET_Y + 1, sizeof(line), "No ascii.txt file was found", RED_BG, RED);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 2, WIDTH, YEL);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y +  4, WIDTH, YEL);
+        input_continue(OFFSET_X, OFFSET_Y + 3, WIDTH);
         return;
     }
 
     // Basically print every line in ascii.txt file
     do {
         status = fgets(line, sizeof(line), file);
-        printf("%s", line);
+        while (line[j] != '\n'){
+            j++;
+        }
+        if (i == 0)
+            screen_draw_line_decor(OFFSET_X, 1, j + 4, PNK);
+
+        screen_draw_line(OFFSET_X, i + 2, j + 4, "", PNK, PNK);
+        screen_draw_raw(OFFSET_X + 2, i + 2, WHT, "%s", line);
+
+        usleep(MILISECONDS * 70);
+        fflush(stdout);
+        i++;
     } while(status != NULL);
+
+    input_continue(OFFSET_X, OFFSET_Y + i + 4, j + 4);
 
     fclose(file);
     free(status);
 }
 
-/* ===================== Cheat Screen ======================= */
-void screen_cheat(){
+// /* ===================== Cheat Screen ======================= */
+void ui_cheat(){
     typedef enum {
         CREDITS = 1,
         SLOT    = 2,
         COIN    = 3,
         RNG     = 4,
         EXIT    = 0
-    } selection_cheat_t;
-    int input;
+    } MenuCheat;
+    int32_t input;
 
     while(RUNNING){
         screen_clear();
-        printf( 
-            MAG"Which cheat do you want to apply?\n"
-            GRN "1 : Change the amount of credit\n"RESET
-                "2 : Always win on slot\n"
-                "3 : Always win on coin toss\n"
-                "4 : Always win on rng\n"
-            RED "0 : Return to previous Selection\n"RESET
-                "Your input: "
-        );
-        if (!sys_input_int(&input)) continue;
+        screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, HEIGHT - 1, "!!! Cheat menu !!!", PNK);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 1, WIDTH, "Which cheat do you want to apply?", PNK, PNK);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 2, WIDTH, PNK);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 3, WIDTH, "1 : Change the amount of credit", GRN, PNK);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 4, WIDTH, "2 : Always win on slot", GRN, PNK);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 5, WIDTH, "3 : Always win on coin toss", LME, PNK);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 6, WIDTH, "4 : Always win on rng", YEL, PNK);
+        screen_draw_line(OFFSET_X, OFFSET_Y + 7, WIDTH, "0 : Return to previous Selection", RED, PNK);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 10, WIDTH, YEL);
+        screen_draw_line_input(OFFSET_X, OFFSET_Y + 9, WIDTH, "Your input : ", YEL, YEL);
+
+        bool check = input_number(OFFSET_X, OFFSET_Y + 9, &input);
+
+        if (check == false) {
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + 9, WIDTH, "Please input the number correctly >w<", RED_BG, RED);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + 11, WIDTH, RED);
+            input_continue(OFFSET_X, OFFSET_Y + 10, WIDTH); 
+            continue;
+        }
+
         switch(input){
             case CREDITS :
-                screen_cheat_credits();
+                ui_cheat_credits();
                 break;
             case SLOT :
             case COIN :
             case RNG :
-                screen_cheat_games(input);
+                ui_cheat_games(input);
                 break;
             case EXIT :
                 return;
             default :
-                printf(RED "Please input correctly >w< !" CURSOR_DOWN RESET);
-                sys_input_return();
+                screen_draw_line_center(OFFSET_X, OFFSET_Y + 9, WIDTH, "Please input the number correctly >w<", RED_BG, RED);
+                screen_draw_line_decor(OFFSET_X, OFFSET_Y + 11, WIDTH, RED);
+                input_continue(OFFSET_X, OFFSET_Y + 10, WIDTH); 
                 break;
         }
     }
 }
 
-void screen_cheat_credits(){
+void ui_cheat_credits(){
     char *username;
     int32_t credits;
 
-    screen_admin_view();
-    printf("Which user do you want to add the %scredits?%s ", MAG, RESET);
-    username = sys_input_str();
+    screen_clear();
+    screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, 3, "Free Credits !!!", GRN);
+    uint8_t i = ui_admin_view(true);
+    screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 2, WIDTH, GRN);
+    screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 4, WIDTH, GRN);
+    screen_draw_line_input(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "Which user do you want to add? ", GRN, GRN);
+
+    username = input_string();
 
     FILE* database_file = fopen("database.dat", "rb+");
-    user_t* database = malloc(sizeof(user_t));
+    User* database = malloc(sizeof(User));
     bool found = false;
-    while(fread(database, sizeof(user_t), 1, database_file) == 1){
+
+    while(fread(database, sizeof(User), 1, database_file) == 1){
         if (strcmp(username, "Admin") == 0){
             found = true;
-            printf(RED "[!] Mr Admin already has infinite credits!" CURSOR_DOWN RESET);
+
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + i+ 3, WIDTH, "You are the game master! No need for that", RED_BG, RED);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + i+ 5, WIDTH, YEL);
+            input_continue(OFFSET_X ,OFFSET_Y + i + 4, WIDTH);
             break;
         } else if (strcmp(username, database->username) == 0){
             found = true;
-            printf("New credits (previous = %i) : ", database->game_data.credits);
-            if (!sys_input_int(&credits)){
-                printf(RED "[!] No changes was made" CURSOR_DOWN RESET);
+
+            screen_draw_line_input(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "New credits (Previous =    ) : ", GRN, GRN);
+            screen_draw_raw(OFFSET_X + 26, OFFSET_Y + i + 3, GRN, "%-3i", database->game_data.credits);
+            SET_OFFSET(OFFSET_X + 33, OFFSET_Y + i + 3);
+            
+            bool check = input_number(OFFSET_X, OFFSET_Y + i + 3, &credits);
+
+            if (check == false) {
+                screen_draw_line_center(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "Please input the number correctly >w<", RED_BG, RED);
+                screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 5, WIDTH, RED);
+                input_continue(OFFSET_X, OFFSET_Y + i + 4, WIDTH); 
                 break;
             }
-            database->game_data.credits += credits;
-            printf("Credits changed to %s%i" CURSOR_DOWN RESET, GRN, database->game_data.credits);
 
-            fseek(database_file, -sizeof(user_t), SEEK_CUR);
-            fwrite(database, sizeof(user_t), 1, database_file); 
+            database->game_data.credits += credits;                
+            screen_draw_line_center(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "Credits changed to : ", GRN_BG, RED);
+            screen_draw_raw(OFFSET_X + 39, OFFSET_Y + i + 3, GRN, "%-3i", database->game_data.credits);
+            screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 5, WIDTH, RED);
+            input_continue(OFFSET_X, OFFSET_Y + i + 4, WIDTH); 
+
+            fseek(database_file, -sizeof(User), SEEK_CUR);
+            fwrite(database, sizeof(User), 1, database_file); 
             break;
         }
     }
-    if (!found){
-        printf(RED"[!] User not found!" CURSOR_DOWN RESET);
+    if (found == false){
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + i + 3, WIDTH, "User not found!", RED_BG, RED);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + i + 5, WIDTH, YEL);
+        input_continue(OFFSET_X ,OFFSET_Y + i + 4, WIDTH);
     }
-    sys_input_return();
+
     free(database);
     free(username);
     fclose(database_file);
 }
 
-void screen_cheat_games(int game_type){
+void ui_cheat_games(uint8_t game_type){
     // slot = 0
     // coin = 1
     // rng  = 2
     char *game[] = {"Slot", "Coin Toss", "RNG"};
-    game_type -= 2; // Offset to fit into array
+    game_type -= 2; // Offset-ed to fit into array
 
     screen_clear();
-    printf( 
-        RED "[!] %sThe change will be in effect until the program is closed %s[!]" CURSOR_DOWN RESET
-            "Selected      : %s "CURSOR_DOWN RESET
-            "Current value : %s "CURSOR_DOWN
-        YEL "Change? (Y/n) : "RESET,
-            MAG, RED,
-            game[game_type], 
-            (cheat[game_type]) ? BLU "True" RESET : RED "False" RESET
-    );
+    screen_draw_box_title(OFFSET_X, OFFSET_Y, WIDTH, 5, "Cheat mode ON !!!", MAG);
+    screen_draw_line_center(OFFSET_X, OFFSET_Y + 1, WIDTH, "The change will be temporary!", RED_BG, MAG);
+    screen_draw_line(OFFSET_X, OFFSET_Y + 2, WIDTH, "Selected game : ", MAG, MAG);
+    screen_draw_raw(OFFSET_X + 18, OFFSET_Y + 2, BLU_BG, "%s", game[game_type]);
+    screen_draw_line(OFFSET_X, OFFSET_Y + 3, WIDTH, "Current value : ", MAG, MAG);
+    screen_draw_raw(OFFSET_X + 18, OFFSET_Y + 3, WHT, "%s", (cheat[game_type]) ? GRN_BG "True " RST : RED_BG "False" RST);
+    screen_draw_line_decor(OFFSET_X, OFFSET_Y + 6, WIDTH, YEL);
+    screen_draw_line_input(OFFSET_X, OFFSET_Y + 5, WIDTH, "Change? (Y/n) ", YEL, YEL);
 
-    if (sys_input_confirm()) {
+    bool confirm = input_confirmation();
+    if (confirm == true){
         // Toogle cheat
         if (cheat[game_type] == false){
             cheat[game_type]    = true;
         } else 
             cheat[game_type] = false;
 
-        printf(CURSOR_UP CURSOR_UP);
-        printf(
-            "Current value : %s  "CURSOR_DOWN
-        YEL "Change? (Y/n) : %sY "CURSOR_DOWN
-        MAG "Successfully changed the value!" CURSOR_DOWN RESET,
-            (cheat[game_type]) ? BLU"True"RESET : RED"False"RESET,
-            RESET
-        );
+        screen_draw_raw(OFFSET_X + 18, OFFSET_Y + 3, WHT, "%s", (cheat[game_type]) ? GRN_BG "True " RST : RED_BG "False" RST);
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH, "Successfully changed the value!", MAG_BG, MAG);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 7, WIDTH, MAG);
+        input_continue(OFFSET_X, OFFSET_Y + 6, WIDTH);
+
     } else {
-        printf(RED "No change was made..." CURSOR_DOWN RESET);
+        screen_draw_line_center(OFFSET_X, OFFSET_Y + 5, WIDTH, "No change was made...", RED_BG, RED);
+        screen_draw_line_decor(OFFSET_X, OFFSET_Y + 7, WIDTH, RED);
+        input_continue(OFFSET_X, OFFSET_Y + 6, WIDTH);
     }
-    sys_input_return();
 }

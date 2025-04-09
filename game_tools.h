@@ -1,50 +1,39 @@
-/* ========== Library ========== */
-#include <stdbool.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <time.h>
+/* =========== Libraries ============= */
+/*
+    // <- already defined in another
+          file
+*/
+#include <stdbool.h>        // ::{bool}
+#include <stdlib.h>      // ::{malloc, free, size_t} 
+#include <stdint.h>      // ::{uint8_t}
+#include <stdio.h>       // ::{fgets, getchar, fseek, rewind, fclose}
+#include <string.h>      // ::{strlen, strcmp}
+#include "game_tui.h"    // ::{screen_draw, screen_clear}
 
-/* ==== Formats and Colors ===== */
-#define RED             "\x1B[31m"
-#define GRN             "\x1B[32m"
-#define YEL             "\x1B[33m"
-#define BLU             "\x1B[34m"
-#define MAG             "\x1B[35m"
-#define CYN             "\x1B[36m"
-#define RESET           "\x1B[0m"
-#define CURSOR_UP       "\033[A"
-#define CURSOR_DOWN     "\n"
-#define CURSOR_HIDE     "\x1B[?25l"
-#define CURSOR_SHOW     "\x1B[?25h"
-#define CURSOR_START    "\r"
-#define CURSOR_BACK     "\b"
+/* =========== Checking... =========== */
+#ifndef GAME_TOOLS
+#define GAME_TOOLS
 
-/* ========== Macros ========== */
-#define BUFF_STR 32
-#define RUNNING 1
-#define MILISECONDS 1000
-#define HOLD_DELAY 500
+/* ============== Macros ============= */
+/*
+    I'm too lazy
+*/
+#define BUFF_STR    128
+#define RUNNING     1
+#define SAME        0
+#define None        false
 
-/* =========== Enums ========== */
-typedef enum {
-    FAILED,
-    SUCCESS,
-} status_t;
+/* ============ Functions ============ */
 
-void screen_clear(){
-    #if   defined(_WIN32) 
-        system("cls");
-    #elif defined(__unix__)
-        printf("\e[1;1H\e[2J");
-    #endif
-}
+char* input_string(){
+    /*
+        Handle string input
 
-char* sys_input_str(){
+        Return : string (char) type
+    */
+
     // Allocate memory for the string
-    char* string = malloc(BUFF_STR);
+    char *string = malloc(BUFF_STR);
     
     // Use fgets for input handling (i mean, i can use printf, but whatever)
     fgets(string, BUFF_STR, stdin);
@@ -52,14 +41,19 @@ char* sys_input_str(){
     return string;
 }
 
-bool sys_input_confirm(){
-    char* input;
-    input = sys_input_str();
+bool input_confirmation(){
+    /*
+        Handle confirmation dialog (yes or no)
+
+        Return : bool
+    */
+
+    char *input = input_string();
 
     if (strlen(input) == 0){ // Press enter
         free(input);
         return true;
-    } else if (strcmp(input, "y") == 0 ||  strcmp(input, "Y") == 0){
+    } else if (strcmp(input, "y") == SAME ||  strcmp(input, "Y") == SAME){
         free(input);
         return true;
     } else {
@@ -68,142 +62,85 @@ bool sys_input_confirm(){
     }
 }
 
-void sys_input_return(){
-    printf(YEL "Press enter to continue..." RESET);
-    while(getchar() != '\n');
+void input_continue(const uint8_t offset_x, const uint8_t offset_y, const uint16_t width){
+    /*
+        Basically give a time for the user to read the
+        contents before it get cleared
+
+        offset_x : x cordinate position
+        offset_y : y cordinate position
+
+        Return : None
+    */
+
+    screen_draw_line_center(offset_x, offset_y, width, "Press enter to continue...", YEL_BG, YEL);
+
+    SET_CURSOR(CURSOR_HIDE); while(getchar() != '\n'); SET_CURSOR(CURSOR_SHOW);
+
     screen_clear();
 }
 
-bool sys_input_int(int * integer){
-    char* input;
-    input = sys_input_str();
+bool input_number(const uint8_t offset_x, const uint8_t offset_y, int32_t *integer){
+    /*
+        Handle number input
+
+        It is quite special since the return type
+        is a boolean instead of int, because it will
+        handle whether the user is actually inputting
+        a number or just random stuff, hence there are
+        also offset parameters for the box.
+
+        offset_x : x cordinate position
+        offset_y : y cordinate position
+
+        Return : bool
+    */
+
+    char *input = input_string();
 
     // Check whether it is truly an integer
-    int32_t check = sscanf(input, "%i", integer);
-    free(input);
+    const uint8_t check = sscanf(input, "%d", integer);
+
     if (check == 1){
+        free(input);
         return true;
     } else {
-        printf(RED "Please input the number correctly >w<\n" RESET);
-        sys_input_return();
+        screen_draw_line_center(offset_x, offset_y, WIDTH, "Please input the number correctly >w<", RED_BG, RED);
+        free(input);
         return false;
     }
 }
+ 
+bool input_filechecker(const uint8_t offset_x, const uint8_t offset_y, FILE *file){
+    /*
+        Handle file input
+       
+        Offset in here is used to handle error message
 
-bool sys_input_check_file(FILE * file){
-    // Check whether the file exist at all
-    if (!file) {
-        printf(RED "[!] There's no data file yet >_<\n" RESET);
+        offset_x : x cordinate position
+        offset_y : y cordinate position
+
+        Return : bool
+    */
+
+    // Check whether the file exists at all
+    if (file == false) {
+        screen_draw_line_center(offset_x, offset_y, WIDTH, "There's no data file yet >_<", RED_BG, RED);
         return false;
     }
 
     // Check whether the file has 0 bytes of data
     fseek(file, 0, SEEK_END);
-    size_t size = ftell(file);
+    const size_t size = ftell(file);
 
     if (size > 0){
         rewind(file);
         return true;
     } else {
-        printf(RED "[!] There's no one yet >_<\n" RESET);
+        screen_draw_line_center(offset_x, offset_y, WIDTH, "There's no one yet >_<", RED_BG, RED);
         fclose(file);
         return false;
     }
 }
 
-void sys_loading_mini(){
-    uint8_t durations = 100; //In miliseconds
-    uint8_t chunks    = durations/6;
-    char *shape[] = {"—", "\\", "|", "/"};
-
-    //The actual part
-    printf(CURSOR_HIDE);
-    for (uint8_t i=0; i <= chunks; i++){
-        printf(CURSOR_START);
-
-        printf("[");
-        if      (i%4 == 1)  printf(YEL"%s"RESET, shape[1]);
-        else if (i%4 == 2)  printf(YEL"%s"RESET, shape[2]);
-        else if (i%4 == 3)  printf(YEL"%s"RESET, shape[3]);
-        else                printf(YEL"%s"RESET, shape[0]);
-        printf("]");
-
-        fflush(stdout); 
-        usleep(durations * MILISECONDS);
-    }
-
-    printf(CURSOR_SHOW);
-    screen_clear();
-}
-
-void sys_loading_default(){
-    uint8_t durations = 75; //In miliseconds
-    uint8_t size    = 30; 
-    char *shape[] = {" ", "-", "o", "c", "C"};
-
-    //Display pre-filled bar
-    printf(CURSOR_HIDE);
-    printf("[");
-    for (int i=0; i < size; i++){
-        if (i % 2 == 1) printf("%s", shape[0]);
-        else            printf("%s", shape[2]);   
-    }
-    printf("]");
-
-    //I love eating candies
-    printf(CURSOR_START);
-    printf("[ ");
-    for (int i=1; i < size; i++){ 
-        printf(CURSOR_BACK YEL "%s" RESET, shape[1]);
-
-        if (i%2 >= 1)   printf(MAG"%s"RESET, shape[4]);
-        else            printf(MAG"%s"RESET, shape[3]);
-
-        fflush(stdout); 
-        usleep(durations * MILISECONDS);
-    }
-    printf("]");
-    printf(BLU" Done! (≧ ∇ ≦)"RESET);
-    printf(CURSOR_DOWN);
-    printf(CURSOR_SHOW);
-
-    fflush(stdout); 
-    usleep(HOLD_DELAY * MILISECONDS);
-}
-
-void sys_loading_nuke(){
-    uint8_t durations = 75; //In miliseconds
-    uint8_t size    = 30; 
-    char *shape[] = {" ", "~", "/", "—", "\\", "|"};
-
-    //Display pre-filled bar
-    printf(CURSOR_HIDE);
-    printf("[");
-    for (int i=0; i < size+1; i++){
-        printf("%s", shape[0]);   
-    }
-    printf("]");
-
-    //Tactical Nuke Incoming!!!
-    printf(CURSOR_START);
-    printf("[ ");
-    for (int i=0; i < size; i++){ 
-        printf(CURSOR_BACK YEL "%s" RESET, shape[1]);
-
-        if      (i == size-1) printf(RED"*"RESET);
-        else if (i%5 == 1)  printf(RED"%s"RESET, shape[2]);
-        else if (i%5 == 2)  printf(RED"%s"RESET, shape[3]);
-        else if (i%5 == 3)  printf(RED"%s"RESET, shape[4]);
-        else                printf(RED"%s"RESET, shape[5]);
-
-        fflush(stdout); 
-        usleep(durations * MILISECONDS);
-    }
-    printf("]");
-    printf(RED" Nuked! (≧ ∇ ≦)"RESET);
-    printf(CURSOR_DOWN);
-    printf(CURSOR_SHOW);
-
-    fflush(stdout); 
-    usleep(HOLD_DELAY * MILISECONDS);
-}
+#endif
