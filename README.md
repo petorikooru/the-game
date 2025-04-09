@@ -31,8 +31,10 @@ Additional options :
 Planned Features :
 1. Login and Sign-up [Done]
 2. Leaderboard [Done]
-3. Replace scanf with sscanf+fgets (memory safety reason) [Done]
-4. ~~ncurses integration so it will look much nicer~~ (nvm im too lazy)
+3. Replace scanf with sscanf+fgets (memory safety reason, atleast it is what they say) [Done]
+4. ~~ncurses integration so it will look much nicer~~ ~~(nvm im too lazy)~~ (Ended up creating an inferior version of it) [Done?]
 5. idk, something that will comes up in my dream
 
-For the old codes, you can check the "Old" branch.
+For the oldest codes, you can check the "Old" branch.
+For the code before the tui rewrite, you can check the "Rewrite" Branch.
+For the tui rewrite (and i guess this main before i fix something), you can check the "Another-Rewrite" Branch.

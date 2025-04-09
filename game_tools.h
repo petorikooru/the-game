@@ -3,7 +3,7 @@
     // <- already defined in another
           file
 */
-#include <stdbool.h>        // ::{bool}
+#include <stdbool.h>     // ::{bool}
 #include <stdlib.h>      // ::{malloc, free, size_t} 
 #include <stdint.h>      // ::{uint8_t}
 #include <stdio.h>       // ::{fgets, getchar, fseek, rewind, fclose}

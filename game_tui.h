@@ -16,8 +16,8 @@
 
 /* =============== TUI =============== */
 /*
-    You can set the default width your
-    default ui HEIGHT and WIDTH here
+    You can set the default settings 
+    of your ui here
 */
 #define WIDTH       57
 #define HEIGHT      10
